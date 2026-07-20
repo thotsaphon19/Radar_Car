@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Log แบบ Live — เรดาร์รถมือสอง</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0F1114; --surface:#181B20; --surface-raised:#20242B; --border:#2A2E36;
+    --text:#F2F3F5; --text-muted:#8B93A0;
+    --accent:#FF5A36; --ok:#34D399; --err:#F04438; --idle:#5B626E; --warn:#F5A623;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:radial-gradient(1200px 600px at 15% -10%, rgba(255,90,54,0.08), transparent 60%), var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  a{color:inherit;}
+  header{max-width:1300px;margin:0 auto;padding:28px 24px 0;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  h1{font-family:'Space Grotesk',sans-serif;font-size:21px;margin:0 0 4px;}
+  .sub{color:var(--text-muted);font-size:13px;}
+  .nav-links{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .nav-link{font-size:13px;color:var(--text-muted);text-decoration:none;border:1px solid var(--border);padding:8px 14px;border-radius:999px;background:none;cursor:pointer;font-family:'Inter',sans-serif;}
+  .nav-link:hover{color:var(--text);border-color:var(--accent);}
+  .nav-link.active-toggle{color:var(--ok);border-color:rgba(52,211,153,0.45);}
+
+  main{max-width:1300px;margin:0 auto;padding:20px 24px 60px;}
+
+  .toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+  .filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .filters input[type=text]{
+    background:var(--surface-raised);border:1px solid var(--border);border-radius:9px;
+    padding:8px 12px;color:var(--text);font-size:13px;font-family:'JetBrains Mono',monospace;min-width:220px;
+  }
+  .filters input[type=text]:focus{outline:none;border-color:var(--accent);}
+  .status-dot{width:9px;height:9px;border-radius:50%;background:var(--idle);display:inline-block;margin-right:6px;flex-shrink:0;}
+  .status-dot.live{background:var(--ok);box-shadow:0 0 0 3px rgba(52,211,153,0.18);}
+  .status-dot.paused{background:var(--warn);}
+  .status-dot.error{background:var(--err);}
+  .status-text{font-size:12.5px;color:var(--text-muted);display:flex;align-items:center;}
+
+  .log-box{
+    background:#0A0C0F;border:1px solid var(--border);border-radius:var(--radius);
+    padding:14px 16px;height:70vh;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:12.5px;
+    line-height:1.65;white-space:pre-wrap;word-break:break-word;
+  }
+  .log-line{display:flex;gap:10px;padding:1px 0;}
+  .log-line.err{color:#FF9A8B;}
+  .log-line .ts{color:#565D68;flex-shrink:0;user-select:none;}
+  .log-line .txt{flex:1;min-width:0;}
+  .log-line.hl-error .txt{color:var(--err);}
+  .log-line.hl-warn .txt{color:var(--warn);}
+  .log-line.hl-ok .txt{color:var(--ok);}
+  .empty-hint{color:var(--text-muted);text-align:center;padding:40px 0;}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>📜 Log แบบ Live</h1>
+    <div class="sub">ดู console log ของเซิร์ฟเวอร์แบบเรียลไทม์ ไม่ต้องเข้า Render dashboard — รีเฟรชอัตโนมัติทุก 2 วินาที</div>
+  </div>
+  <div class="nav-links">
+    <button class="nav-link" id="pauseBtn">⏸️ หยุดชั่วคราว</button>
+    <button class="nav-link" id="clearBtn">🗑️ ล้างหน้าจอ</button>
+    <a class="nav-link" href="/health.html">สถานะเชื่อมต่อ</a>
+    <a class="nav-link" href="/">← แดชบอร์ด</a>
+  </div>
+</header>
+
+<main>
+  <div class="toolbar">
+    <div class="filters">
+      <input type="text" id="filterInput" placeholder="กรองด้วยคำ เช่น facebook_group, ❌, kaidee ...">
+    </div>
+    <div class="status-text"><span class="status-dot live" id="statusDot"></span><span id="statusText">กำลังเชื่อมต่อ...</span></div>
+  </div>
+
+  <div class="log-box mono" id="logBox">
+    <div class="empty-hint">ยังไม่มี log — รอสักครู่...</div>
+  </div>
+</main>
+
+<script>
+let latestSeq = 0;
+let paused = false;
+let allLines = [];
+let pollTimer = null;
+let hadError = false;
+
+const logBox = document.getElementById('logBox');
+const statusDot = document.getElementById('statusDot');
+const statusText = document.getElementById('statusText');
+const filterInput = document.getElementById('filterInput');
+const pauseBtn = document.getElementById('pauseBtn');
+const clearBtn = document.getElementById('clearBtn');
+
+function lineClass(line) {
+  if (/❌|error|ล้มเหลว|fail/i.test(line)) return 'hl-error';
+  if (/⚠️|warn/i.test(line)) return 'hl-warn';
+  if (/✅|🆕|✓/.test(line)) return 'hl-ok';
+  return '';
+}
+
+function formatTs(iso) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleTimeString('th-TH', { hour12: false });
+  } catch (e) { return ''; }
+}
+
+function render() {
+  const filterVal = filterInput.value.trim().toLowerCase();
+  const filtered = filterVal ? allLines.filter(l => l.line.toLowerCase().includes(filterVal)) : allLines;
+
+  if (filtered.length === 0) {
+    logBox.innerHTML = '<div class="empty-hint">' + (filterVal ? 'ไม่พบ log ที่ตรงกับคำกรอง' : 'ยังไม่มี log — รอสักครู่...') + '</div>';
+    return;
+  }
+
+  const wasAtBottom = logBox.scrollTop + logBox.clientHeight >= logBox.scrollHeight - 40;
+
+  logBox.innerHTML = filtered.map(l => `
+    <div class="log-line ${l.level === 'error' ? 'err' : ''} ${lineClass(l.line)}">
+      <span class="ts">${formatTs(l.ts)}</span>
+      <span class="txt"></span>
+    </div>
+  `).join('');
+
+  // ใส่ text ผ่าน textContent (ไม่ใช้ innerHTML ตรงๆ) กัน log ที่มีอักขระ HTML พังหน้า/เกิด XSS
+  const txtEls = logBox.querySelectorAll('.txt');
+  filtered.forEach((l, i) => { txtEls[i].textContent = l.line; });
+
+  if (wasAtBottom) logBox.scrollTop = logBox.scrollHeight;
+}
+
+async function poll() {
+  if (paused) return;
+  try {
+    const res = await fetch('/api/logs?after=' + latestSeq);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (data.items && data.items.length > 0) {
+      allLines = allLines.concat(data.items);
+      if (allLines.length > 2000) allLines = allLines.slice(-2000); // กันหน้าเว็บหนักถ้าเปิดค้างไว้นานมาก
+      latestSeq = data.latestSeq;
+      render();
+    }
+    if (hadError) { hadError = false; }
+    statusDot.className = 'status-dot live';
+    statusText.textContent = 'เชื่อมต่ออยู่ — อัปเดตล่าสุด ' + new Date().toLocaleTimeString('th-TH', { hour12: false });
+  } catch (e) {
+    hadError = true;
+    statusDot.className = 'status-dot error';
+    statusText.textContent = 'เชื่อมต่อไม่ได้: ' + e.message;
+  }
+}
+
+pauseBtn.addEventListener('click', () => {
+  paused = !paused;
+  pauseBtn.textContent = paused ? '▶️ เล่นต่อ' : '⏸️ หยุดชั่วคราว';
+  statusDot.className = 'status-dot ' + (paused ? 'paused' : 'live');
+  statusText.textContent = paused ? 'หยุดรับ log ชั่วคราว (log ใหม่จะไม่หายไปไหน กด "เล่นต่อ" เพื่อดูต่อ)' : 'เชื่อมต่ออยู่';
+});
+
+clearBtn.addEventListener('click', () => {
+  allLines = [];
+  render();
+});
+
+filterInput.addEventListener('input', render);
+
+poll();
+pollTimer = setInterval(poll, 2000);
+</script>
+
+</body>
+</html>

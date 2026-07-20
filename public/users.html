@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>จัดการผู้ใช้ — เรดาร์รถมือสอง</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0F1114; --surface:#181B20; --surface-raised:#20242B; --border:#2A2E36;
+    --text:#F2F3F5; --text-muted:#8B93A0; --accent:#FF5A36; --ok:#34D399; --err:#F04438;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:radial-gradient(1200px 600px at 15% -10%, rgba(255,90,54,0.08), transparent 60%), var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  a{color:inherit;}
+  header{max-width:900px;margin:0 auto;padding:28px 24px 0;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  h1{font-family:'Space Grotesk',sans-serif;font-size:21px;margin:0 0 4px;}
+  .sub{color:var(--text-muted);font-size:13px;}
+  .nav-links{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .nav-link{font-size:13px;color:var(--text-muted);text-decoration:none;border:1px solid var(--border);padding:8px 14px;border-radius:999px;}
+  .nav-link:hover{color:var(--text);border-color:var(--accent);}
+  main{max-width:900px;margin:0 auto;padding:24px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px 24px;margin-bottom:20px;}
+  .card h2{font-size:16px;margin:0 0 14px;font-family:'Space Grotesk',sans-serif;}
+
+  table{width:100%;border-collapse:collapse;}
+  th,td{text-align:left;padding:10px 8px;font-size:13.5px;border-bottom:1px solid var(--border);}
+  th{color:var(--text-muted);font-weight:500;font-size:12px;text-transform:uppercase;letter-spacing:.03em;}
+  .role-badge{font-size:11px;padding:3px 9px;border-radius:999px;background:rgba(255,90,54,0.15);color:var(--accent);}
+  .role-badge.staff{background:rgba(139,147,160,0.15);color:var(--text-muted);}
+  .del-btn{background:none;border:1px solid var(--border);color:var(--text-muted);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12.5px;}
+  .del-btn:hover{border-color:var(--err);color:var(--err);}
+
+  .form-row{display:grid;grid-template-columns:1fr 1fr 140px auto;gap:10px;align-items:end;}
+  @media (max-width:640px){ .form-row{grid-template-columns:1fr;} }
+  label{display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;}
+  input,select{width:100%;background:var(--surface-raised);border:1px solid var(--border);border-radius:9px;padding:10px 12px;color:var(--text);font-size:14px;font-family:'Inter',sans-serif;}
+  input:focus,select:focus{outline:none;border-color:var(--accent);}
+  .add-btn{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:10px 18px;font-size:13.5px;font-weight:600;cursor:pointer;}
+  .add-btn:hover{filter:brightness(1.08);}
+  .status-msg{font-size:13px;margin-top:10px;color:var(--text-muted);}
+  .status-msg.ok{color:var(--ok);}
+  .status-msg.err{color:var(--err);}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>👥 จัดการผู้ใช้</h1>
+    <div class="sub">เพิ่ม/ลบผู้ใช้ที่เข้าถึงระบบได้ — แอดมินจัดการได้ทุกอย่าง, staff ดูแดชบอร์ด+จัดการรถที่ต้องการได้เท่านั้น</div>
+  </div>
+  <div class="nav-links">
+    <a class="nav-link" href="/">← แดชบอร์ด</a>
+    <a class="nav-link" href="/settings.html">⚙️ ตั้งค่า</a>
+  </div>
+</header>
+
+<main>
+  <div class="card">
+    <h2>เพิ่มผู้ใช้ใหม่</h2>
+    <div class="form-row">
+      <div>
+        <label>ชื่อผู้ใช้</label>
+        <input type="text" id="newUsername" placeholder="เช่น sales01">
+      </div>
+      <div>
+        <label>รหัสผ่าน (อย่างน้อย 6 ตัว)</label>
+        <input type="text" id="newPassword" placeholder="ตั้งรหัสผ่านชั่วคราว">
+      </div>
+      <div>
+        <label>สิทธิ์</label>
+        <select id="newRole">
+          <option value="staff">staff (พนักงาน)</option>
+          <option value="admin">admin (แอดมิน)</option>
+        </select>
+      </div>
+      <button class="add-btn" id="addUserBtn">เพิ่มผู้ใช้</button>
+    </div>
+    <div class="status-msg" id="addStatus"></div>
+  </div>
+
+  <div class="card">
+    <h2>ผู้ใช้ทั้งหมด</h2>
+    <table>
+      <thead><tr><th>ชื่อผู้ใช้</th><th>สิทธิ์</th><th>สร้างเมื่อ</th><th></th></tr></thead>
+      <tbody id="userTableBody"></tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+let currentUserId = null;
+
+async function loadMe(){
+  const res = await fetch('/api/auth/me');
+  const data = await res.json();
+  currentUserId = data.user?.id;
+}
+
+function userRowHTML(u){
+  const isSelf = u.id === currentUserId;
+  return `
+    <tr>
+      <td>${u.username}${isSelf ? ' <span class="mono" style="color:var(--text-muted);font-size:11px;">(คุณ)</span>' : ''}</td>
+      <td><span class="role-badge ${u.role === 'staff' ? 'staff' : ''}">${u.role}</span></td>
+      <td class="mono">${new Date(u.createdAt).toLocaleDateString('th-TH')}</td>
+      <td>${isSelf ? '' : `<button class="del-btn" data-id="${u.id}">ลบ</button>`}</td>
+    </tr>
+  `;
+}
+
+async function loadUsers(){
+  const res = await fetch('/api/users');
+  const data = await res.json();
+  if (!data.ok) { document.body.innerHTML = `<p style="padding:40px;color:#F04438;">${data.error}</p>`; return; }
+  const tbody = document.getElementById('userTableBody');
+  tbody.innerHTML = data.users.map(userRowHTML).join('');
+  tbody.querySelectorAll('.del-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('ลบผู้ใช้นี้ใช่ไหม? กู้คืนไม่ได้')) return;
+      const res = await fetch('/api/users/' + btn.dataset.id, { method: 'DELETE' });
+      const d = await res.json();
+      if (!d.ok) return alert(d.error);
+      loadUsers();
+    });
+  });
+}
+
+document.getElementById('addUserBtn').addEventListener('click', async () => {
+  const statusEl = document.getElementById('addStatus');
+  const username = document.getElementById('newUsername').value.trim();
+  const password = document.getElementById('newPassword').value;
+  const role = document.getElementById('newRole').value;
+
+  statusEl.textContent = 'กำลังเพิ่ม...';
+  statusEl.className = 'status-msg';
+  try {
+    const res = await fetch('/api/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, role }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    statusEl.textContent = `✓ เพิ่ม "${data.user.username}" แล้ว — บอกรหัสผ่านนี้ให้เขาไปเปลี่ยนเองหลังล็อกอินครั้งแรก`;
+    statusEl.className = 'status-msg ok';
+    document.getElementById('newUsername').value = '';
+    document.getElementById('newPassword').value = '';
+    loadUsers();
+  } catch (e) {
+    statusEl.textContent = '✗ ' + e.message;
+    statusEl.className = 'status-msg err';
+  }
+});
+
+(async () => { await loadMe(); await loadUsers(); })();
+</script>
+</body>
+</html>

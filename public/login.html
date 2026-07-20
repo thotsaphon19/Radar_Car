@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>เข้าสู่ระบบ — เรดาร์รถมือสอง</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0F1114; --surface:#181B20; --surface-raised:#20242B; --border:#2A2E36;
+    --text:#F2F3F5; --text-muted:#8B93A0; --accent:#FF5A36; --err:#F04438;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;min-height:100vh;
+    display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(1200px 600px at 50% -10%, rgba(255,90,54,0.10), transparent 60%), var(--bg);
+    color:var(--text);font-family:'Inter',sans-serif;
+  }
+  .box{width:100%;max-width:360px;padding:32px 28px;background:var(--surface);border:1px solid var(--border);border-radius:16px;}
+  .brand{display:flex;align-items:center;gap:10px;margin-bottom:22px;}
+  .brand-mark{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--accent),#FF8A3D);display:flex;align-items:center;justify-content:center;font-size:17px;}
+  h1{font-family:'Space Grotesk',sans-serif;font-size:18px;margin:0;}
+  label{display:block;font-size:12.5px;color:var(--text-muted);margin:14px 0 6px;}
+  input{
+    width:100%;background:var(--surface-raised);border:1px solid var(--border);border-radius:9px;
+    padding:11px 13px;color:var(--text);font-size:14.5px;font-family:'Inter',sans-serif;
+  }
+  input:focus{outline:none;border-color:var(--accent);}
+  button{
+    width:100%;margin-top:20px;background:var(--accent);color:#fff;border:none;border-radius:10px;
+    padding:12px;font-size:14.5px;font-weight:600;cursor:pointer;
+  }
+  button:hover{filter:brightness(1.08);}
+  button:disabled{opacity:.6;cursor:default;}
+  .error{color:var(--err);font-size:13px;margin-top:12px;min-height:16px;}
+</style>
+</head>
+<body>
+  <form class="box" id="loginForm">
+    <div class="brand">
+      <div class="brand-mark">🚗</div>
+      <h1>เรดาร์รถมือสอง</h1>
+    </div>
+    <label>ชื่อผู้ใช้</label>
+    <input type="text" id="username" autocomplete="username" required>
+    <label>รหัสผ่าน</label>
+    <input type="password" id="password" autocomplete="current-password" required>
+    <button type="submit" id="submitBtn">เข้าสู่ระบบ</button>
+    <div class="error" id="errorBox"></div>
+  </form>
+
+<script>
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('submitBtn');
+  const errorBox = document.getElementById('errorBox');
+  btn.disabled = true;
+  errorBox.textContent = '';
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: document.getElementById('username').value.trim(),
+        password: document.getElementById('password').value,
+      }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'เข้าสู่ระบบไม่สำเร็จ');
+    window.location.href = '/';
+  } catch (err) {
+    errorBox.textContent = err.message;
+    btn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

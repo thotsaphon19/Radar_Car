@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>เรดาร์รถมือสอง — Live Feed</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0F1114;
+    --surface:#181B20;
+    --surface-raised:#20242B;
+    --border:#2A2E36;
+    --text:#F2F3F5;
+    --text-muted:#8B93A0;
+    --accent:#FF5A36;
+    --accent-dim:#7A3020;
+    --ok:#34D399;
+    --err:#F04438;
+    --idle:#5B626E;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(255,90,54,0.08), transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+  .display{font-family:'Space Grotesk',sans-serif;}
+
+  header{
+    padding:28px 32px 0;
+    max-width:1360px;
+    margin:0 auto;
+  }
+  .header-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    flex-wrap:wrap;
+  }
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand-mark{
+    width:38px;height:38px;border-radius:10px;
+    background:linear-gradient(135deg, var(--accent), #FF8A3D);
+    display:flex;align-items:center;justify-content:center;
+    font-size:18px;
+  }
+  h1{
+    font-size:22px;
+    margin:0;
+    letter-spacing:-0.01em;
+    font-weight:700;
+  }
+  .brand-sub{color:var(--text-muted);font-size:13px;margin-top:2px;}
+  .updated-at{color:var(--text-muted);font-size:12.5px;text-align:right;}
+  .updated-at b{color:var(--text);font-weight:600;}
+  .nav-link{color:var(--text-muted);text-decoration:none;border:1px solid var(--border);padding:9px 14px;border-radius:999px;font-size:13px;white-space:nowrap;}
+  .nav-link:hover{color:var(--text);border-color:var(--accent);}
+  .user-badge{font-size:12.5px;color:var(--text-muted);}
+  .user-badge b{color:var(--text);}
+  .logout-btn{background:none;border:1px solid var(--border);color:var(--text-muted);border-radius:999px;padding:9px 14px;font-size:13px;cursor:pointer;}
+  .logout-btn:hover{border-color:var(--err);color:var(--err);}
+  .refresh-btn{
+    background:var(--surface);border:1px solid var(--border);color:var(--text);
+    border-radius:999px;padding:9px 16px;font-size:13px;cursor:pointer;
+    display:flex;align-items:center;gap:6px;white-space:nowrap;
+  }
+  .refresh-btn:hover{border-color:var(--accent);}
+  .refresh-btn:disabled{opacity:.55;cursor:default;}
+  .refresh-btn .spin{display:inline-block;animation:spin 0.9s linear infinite;}
+  @keyframes spin{ from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
+  .save-star{
+    position:absolute;bottom:10px;right:10px;
+    width:32px;height:32px;border-radius:50%;
+    background:rgba(15,17,20,0.75);backdrop-filter:blur(4px);
+    border:1px solid var(--border);
+    display:flex;align-items:center;justify-content:center;
+    font-size:15px;cursor:pointer;color:var(--text-muted);
+    transition:all .15s;
+  }
+  .save-star:hover{color:var(--accent);border-color:var(--accent);}
+  .save-star.saved{color:var(--accent);border-color:var(--accent);background:rgba(255,90,54,0.15);}
+
+  /* ---- signature: heartbeat pulse strip ---- */
+  .pulse-strip{
+    position:relative;
+    height:34px;
+    margin:20px 0 4px;
+    overflow:hidden;
+    border-radius:8px;
+    background:var(--surface);
+    border:1px solid var(--border);
+  }
+  .pulse-strip svg{width:200%;height:100%;display:block;animation:scroll-pulse 6s linear infinite;}
+  .pulse-strip path{
+    fill:none;
+    stroke:var(--accent);
+    stroke-width:1.6;
+    opacity:0.55;
+  }
+  @keyframes scroll-pulse{ from{transform:translateX(0);} to{transform:translateX(-50%);} }
+  .pulse-strip.flash path{ stroke:var(--ok); opacity:1; filter:drop-shadow(0 0 6px var(--ok)); }
+
+  main{max-width:1360px;margin:0 auto;padding:8px 32px 60px;}
+
+  /* ---- status cards ---- */
+  .status-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+    gap:12px;
+    margin:18px 0 28px;
+  }
+  .status-card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:16px 18px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    transition:border-color .3s;
+  }
+  .status-card.ok{border-color:rgba(52,211,153,0.35);}
+  .status-card.error{border-color:rgba(240,68,56,0.45);}
+  .status-top{display:flex;align-items:center;justify-content:space-between;}
+  .status-name{font-weight:600;font-size:14.5px;}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--idle);flex-shrink:0;}
+  .dot.ok{background:var(--ok);box-shadow:0 0 0 3px rgba(52,211,153,0.18);}
+  .dot.error{background:var(--err);box-shadow:0 0 0 3px rgba(240,68,56,0.18);}
+  .status-meta{display:flex;justify-content:space-between;align-items:baseline;}
+  .status-count{font-size:24px;font-weight:600;}
+  .status-count-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;}
+  .status-time{font-size:12px;color:var(--text-muted);}
+  .status-time b{color:var(--text);}
+
+  /* ---- controls ---- */
+  .controls{
+    display:flex;gap:10px;flex-wrap:wrap;align-items:center;
+    margin-bottom:20px;
+  }
+  .search-box{
+    flex:1;min-width:220px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:10px 14px;
+    color:var(--text);
+    font-size:14px;
+    font-family:'Inter',sans-serif;
+  }
+  .search-box:focus{outline:none;border-color:var(--accent);}
+  .chip{
+    background:var(--surface);
+    border:1px solid var(--border);
+    color:var(--text-muted);
+    padding:8px 14px;
+    border-radius:999px;
+    font-size:13px;
+    cursor:pointer;
+    user-select:none;
+    transition:all .15s;
+    white-space:nowrap;
+  }
+  .chip:hover{border-color:var(--accent);color:var(--text);}
+  .chip.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500;}
+
+  /* ---- feed grid ---- */
+  .feed-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px;}
+  .feed-header h2{font-size:15px;color:var(--text-muted);font-weight:500;margin:0;}
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+    gap:16px;
+  }
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    overflow:hidden;
+    display:flex;flex-direction:column;
+    text-decoration:none;
+    color:var(--text);
+    transition:transform .18s, border-color .18s;
+  }
+  .card:hover{transform:translateY(-3px);border-color:rgba(255,90,54,0.4);}
+  .card.fresh{animation:pop-in .5s ease-out;box-shadow:0 0 0 2px var(--accent), 0 8px 24px rgba(255,90,54,0.25);}
+  @keyframes pop-in{
+    from{opacity:0;transform:translateY(10px) scale(.98);}
+    to{opacity:1;transform:translateY(0) scale(1);}
+  }
+  .card-image{
+    position:relative;
+    aspect-ratio:16/10;
+    background:linear-gradient(135deg,#22262E,#181B20);
+    overflow:hidden;
+  }
+  .card-image img{width:100%;height:100%;object-fit:cover;display:block;}
+  .badge{
+    position:absolute;top:10px;left:10px;
+    background:rgba(15,17,20,0.75);
+    backdrop-filter:blur(4px);
+    padding:4px 9px;
+    border-radius:6px;
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:.02em;
+  }
+  .badge.new{
+    top:10px;right:10px;left:auto;
+    background:var(--accent);
+    color:#fff;
+  }
+  .card-price{
+    position:absolute;bottom:0;left:0;right:0;
+    padding:22px 12px 10px;
+    background:linear-gradient(to top, rgba(0,0,0,0.75), transparent);
+    font-size:18px;font-weight:600;
+  }
+  .card-body{padding:12px 14px 14px;display:flex;flex-direction:column;gap:6px;flex:1;}
+  .card-title{font-size:13.5px;line-height:1.4;color:var(--text);
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:37px;}
+  .group-label{font-size:10.5px;color:var(--accent);font-weight:600;margin-bottom:4px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .card-foot{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--text-muted);margin-top:auto;}
+
+  .empty{
+    text-align:center;padding:60px 20px;color:var(--text-muted);
+    border:1px dashed var(--border);border-radius:var(--radius);
+  }
+
+  @media (max-width:600px){
+    header,main{padding-left:16px;padding-right:16px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-row">
+    <div class="brand">
+      <div class="brand-mark">🚗</div>
+      <div>
+        <h1 class="display">เรดาร์รถมือสอง</h1>
+        <div class="brand-sub">ตามล่ารถเข้าใหม่ก่อนคู่แข่ง — Facebook · One2Car · Kaidee</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;" id="navArea">
+      <div class="updated-at">อัปเดตล่าสุด<br><b id="updatedAt" class="mono">—</b></div>
+      <button class="refresh-btn" id="refreshNowBtn"><span id="refreshIcon">🔄</span> ดึงข้อมูลตอนนี้</button>
+    </div>
+  </div>
+
+  <div class="pulse-strip" id="pulseStrip">
+    <svg viewBox="0 0 400 34" preserveAspectRatio="none">
+      <path d="M0,17 L60,17 L72,4 L84,30 L96,17 L160,17 L172,4 L184,30 L196,17 L400,17
+               L460,17 L472,4 L484,30 L496,17 L560,17 L572,4 L584,30 L596,17 L800,17" />
+    </svg>
+  </div>
+</header>
+
+<div id="redisWarningBanner" style="display:none;max-width:1360px;margin:16px auto 0;padding:0 32px;">
+  <div style="background:rgba(240,68,56,0.1);border:1px solid var(--err);border-radius:10px;padding:14px 18px;font-size:13.5px;line-height:1.6;">
+    ⚠️ <b style="color:var(--err);">บันทึกข้อมูลลง Redis ไม่สำเร็จ</b> — การตั้งค่า (กลุ่ม Facebook, ผู้ใช้, รถที่ต้องการ) <b>จะไม่ถูกบันทึกจริง</b> จนกว่าจะแก้ปัญหานี้
+    <br>สาเหตุที่พบบ่อยสุด: ใช้ <span class="mono">UPSTASH_REDIS_REST_READONLY_TOKEN</span> แทนที่จะเป็น <span class="mono">UPSTASH_REDIS_REST_TOKEN</span> — เข้า Upstash Dashboard แล้วคัดลอก token ตัวที่เขียนได้มาใส่ใหม่
+    <br><span class="mono" id="redisErrorDetail" style="color:var(--text-muted);font-size:11.5px;"></span>
+  </div>
+</div>
+
+<main>
+  <div class="status-grid" id="statusGrid"></div>
+
+  <div class="controls">
+    <input class="search-box" id="searchBox" type="text" placeholder="ค้นหารุ่นรถ เช่น Vios, Civic, D-MAX...">
+    <div class="chip active" data-source="">ทั้งหมด</div>
+    <div class="chip" data-source="facebook_marketplace">FB Marketplace</div>
+    <div class="chip" data-source="facebook_group">FB Group</div>
+    <div class="chip" data-source="one2car">One2Car</div>
+    <div class="chip" data-source="kaidee">Kaidee</div>
+  </div>
+
+  <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
+    <input class="search-box" id="quickAddInput" type="text" style="flex:1;min-width:260px;"
+      placeholder="เจอรถถูกใจใน Facebook Marketplace เอง? วางลิงก์ประกาศตรงนี้เพื่อเพิ่มเข้าระบบ...">
+    <button class="chip" id="quickAddBtn" style="background:var(--accent);border-color:var(--accent);color:#fff;cursor:pointer;">+ เพิ่มจากลิงก์</button>
+  </div>
+  <div id="quickAddStatus" style="font-size:12.5px;color:var(--text-muted);margin:-12px 0 16px;"></div>
+
+  <div class="feed-header">
+    <h2 id="feedCount">กำลังโหลด...</h2>
+  </div>
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="emptyState" style="display:none;">ยังไม่มีประกาศที่ตรงกับตัวกรอง — รอรอบถัดไปหรือเปลี่ยนตัวกรองดูครับ</div>
+</main>
+
+<script>
+const SOURCE_LABELS = {
+  facebook_marketplace: 'FB Marketplace',
+  facebook_group: 'FB Group',
+  one2car: 'One2Car',
+  kaidee: 'Kaidee',
+};
+const SOURCE_COLORS = {
+  facebook_marketplace: '#4267B2',
+  facebook_group: '#4267B2',
+  one2car: '#D71920',
+  kaidee: '#EA4C4C',
+};
+const PLACEHOLDER = 'data:image/svg+xml;utf8,' + encodeURIComponent(`
+  <svg xmlns="http://www.w3.org/2000/svg" width="400" height="250" viewBox="0 0 400 250">
+    <rect width="400" height="250" fill="#1B1F26"/>
+    <path fill="#3A3F49" d="M80 165h240l-18-48c-4-11-14-18-26-18h-152c-12 0-22 7-26 18l-18 48z"/>
+    <circle cx="120" cy="170" r="18" fill="#20242B" stroke="#3A3F49" stroke-width="4"/>
+    <circle cx="280" cy="170" r="18" fill="#20242B" stroke="#3A3F49" stroke-width="4"/>
+  </svg>
+`);
+
+let allListings = [];
+let savedUrls = new Set();
+let currentSource = '';
+let currentQuery = '';
+
+const grid = document.getElementById('grid');
+const feedCount = document.getElementById('feedCount');
+const emptyState = document.getElementById('emptyState');
+const statusGrid = document.getElementById('statusGrid');
+const updatedAtEl = document.getElementById('updatedAt');
+const pulseStrip = document.getElementById('pulseStrip');
+
+function timeAgo(iso){
+  if(!iso) return '—';
+  const s = Math.floor((Date.now() - new Date(iso).getTime())/1000);
+  if(s < 5) return 'เมื่อสักครู่';
+  if(s < 60) return s + ' วิที่แล้ว';
+  const m = Math.floor(s/60);
+  if(m < 60) return m + ' นาทีที่แล้ว';
+  const h = Math.floor(m/60);
+  if (h < 24) return h + ' ชม.ที่แล้ว';
+  return Math.floor(h/24) + ' วันที่แล้ว';
+}
+
+function formatPrice(price){
+  if(!price) return 'ไม่ระบุราคา';
+  return '฿' + Number(price).toLocaleString('th-TH');
+}
+
+function updateRedisBanner(redisHealth){
+  const banner = document.getElementById('redisWarningBanner');
+  if (!redisHealth || redisHealth.ok) {
+    banner.style.display = 'none';
+    return;
+  }
+  banner.style.display = 'block';
+  document.getElementById('redisErrorDetail').textContent = 'ข้อความ error จริง: ' + (redisHealth.lastError || '-');
+}
+
+function renderStatus(statusMap){
+  statusGrid.innerHTML = '';
+  Object.values(statusMap).forEach(s => {
+    const el = document.createElement('div');
+    el.className = 'status-card ' + (s.state || 'idle');
+    el.innerHTML = `
+      <div class="status-top">
+        <span class="status-name">${s.label}</span>
+        <span class="dot ${s.state || 'idle'}"></span>
+      </div>
+      <div class="status-meta">
+        <span class="status-count mono">${s.todayCount || 0}</span>
+        <span class="status-count-label">คันวันนี้</span>
+      </div>
+      <div class="status-time">ดึงล่าสุด <b class="mono" data-lastsync="${s.lastSync || ''}">${timeAgo(s.lastSync)}</b></div>
+    `;
+    statusGrid.appendChild(el);
+  });
+}
+
+function matchesFilter(l){
+  if(currentSource && l.source !== currentSource) return false;
+  if(currentQuery && !l.title.toLowerCase().includes(currentQuery)) return false;
+  return true;
+}
+
+function cardHTML(l, isFresh){
+  const color = SOURCE_COLORS[l.source] || '#666';
+  const isSaved = savedUrls.has(l.url);
+  // ผ่าน /api/image-proxy เสมอ (ไม่ลิงก์ตรงไปเว็บต้นทาง) — เว็บต้นทางส่วนใหญ่ทำ hotlink protection
+  // เช็ค Referer กันไม่ให้เว็บอื่นฝัง <img> ตรงๆ ทำให้โหลดไม่ขึ้น (ขึ้น placeholder รถสีเทาแทนตลอด)
+  // ให้เซิร์ฟเวอร์เราไปขอรูปแทน (server-to-server ไม่ติด Referer check แบบเดียวกับ browser) แล้วส่งต่อ
+  const imgSrc = l.image ? `/api/image-proxy?url=${encodeURIComponent(l.image)}` : PLACEHOLDER;
+  return `
+    <a class="card ${isFresh ? 'fresh' : ''}" href="${l.url}" target="_blank" rel="noopener" data-url="${l.url}">
+      <div class="card-image">
+        <img src="${imgSrc}" loading="lazy" onerror="this.onerror=null;this.src='${PLACEHOLDER}'">
+        <span class="badge" style="background:${color}cc;">${SOURCE_LABELS[l.source] || l.source}</span>
+        ${isFresh ? '<span class="badge new">ใหม่</span>' : ''}
+        <div class="save-star ${isSaved ? 'saved' : ''}" data-save-url="${l.url}" title="บันทึกไว้ในรถที่ต้องการ">${isSaved ? '★' : '☆'}</div>
+        <div class="card-price mono">${formatPrice(l.price)}</div>
+      </div>
+      <div class="card-body">
+        ${l.groupLabel ? `<div class="group-label">📌 ${l.groupLabel}</div>` : ''}
+        <div class="card-title">${l.title}</div>
+        <div class="card-foot">
+          <span class="mono">${timeAgo(l.scrapedAt)}</span>
+        </div>
+      </div>
+    </a>
+  `;
+}
+
+function renderGrid(){
+  const filtered = allListings.filter(matchesFilter);
+  feedCount.textContent = `พบ ${filtered.length} ประกาศ`;
+  emptyState.style.display = filtered.length === 0 ? 'block' : 'none';
+  grid.innerHTML = filtered.map(l => cardHTML(l, l._fresh)).join('');
+}
+
+function addFreshListings(newOnes){
+  newOnes.forEach(l => l._fresh = true);
+  allListings = [...newOnes, ...allListings].slice(0, 500);
+  renderGrid();
+  setTimeout(() => {
+    newOnes.forEach(l => l._fresh = false);
+  }, 8000);
+  flashPulse();
+}
+
+function flashPulse(){
+  pulseStrip.classList.add('flash');
+  setTimeout(() => pulseStrip.classList.remove('flash'), 900);
+}
+
+// ---- controls ----
+document.getElementById('searchBox').addEventListener('input', (e) => {
+  currentQuery = e.target.value.trim().toLowerCase();
+  renderGrid();
+});
+document.querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    currentSource = chip.dataset.source;
+    renderGrid();
+  });
+});
+
+// ---- live "time ago" ticking every 15s without full re-render ----
+setInterval(() => {
+  document.querySelectorAll('[data-lastsync]').forEach(el => {
+    const iso = el.getAttribute('data-lastsync');
+    if (iso) el.textContent = timeAgo(iso);
+  });
+  document.querySelectorAll('.card-foot .mono').forEach((el, i) => {
+    // re-render on next full grid render anyway; skip heavy work here
+  });
+}, 15000);
+
+grid.addEventListener('click', async (e) => {
+  const star = e.target.closest('.save-star');
+  if (!star) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const url = star.dataset.saveUrl;
+  const listing = allListings.find(x => x.url === url);
+  if (!listing) return;
+
+  if (savedUrls.has(url)) {
+    await fetch('/api/leads?url=' + encodeURIComponent(url), { method: 'DELETE' });
+    savedUrls.delete(url);
+  } else {
+    await fetch('/api/leads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url: listing.url, title: listing.title, price: listing.price,
+        image: listing.image, source: listing.source, status: 'interested',
+      }),
+    });
+    savedUrls.add(url);
+  }
+  renderGrid();
+});
+
+async function loadNav(){
+  const res = await fetch('/api/auth/me');
+  const data = await res.json();
+  const user = data.user;
+  if (!user) return;
+  const isAdmin = user.role === 'admin';
+  document.getElementById('navArea').insertAdjacentHTML('beforeend', `
+    <a class="nav-link" href="/leads.html">🚘 รถที่ต้องการ</a>
+    ${isAdmin ? '<a class="nav-link" href="/settings.html">⚙️ ตั้งค่า</a>' : ''}
+    ${isAdmin ? '<a class="nav-link" href="/health.html">🩺 สถานะเชื่อมต่อ</a>' : ''}
+    ${isAdmin ? '<a class="nav-link" href="/users.html">👥 ผู้ใช้</a>' : ''}
+    <span class="user-badge">👤 <b>${user.username}</b></span>
+    <button class="nav-link" id="changePassBtn" style="cursor:pointer;">🔑 เปลี่ยนรหัสผ่าน</button>
+    <button class="logout-btn" id="logoutBtn">ออกจากระบบ</button>
+  `);
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = '/login.html';
+  });
+  document.getElementById('changePassBtn').addEventListener('click', openChangePasswordModal);
+}
+
+function openChangePasswordModal(){
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:999;';
+  overlay.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;width:320px;">
+      <h3 style="margin:0 0 14px;font-family:'Space Grotesk',sans-serif;font-size:16px;">🔑 เปลี่ยนรหัสผ่าน</h3>
+      <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;">รหัสผ่านใหม่ (อย่างน้อย 6 ตัว)</label>
+      <input type="password" id="newPassInput" style="width:100%;background:var(--surface-raised);border:1px solid var(--border);border-radius:9px;padding:10px 12px;color:var(--text);font-size:14px;margin-bottom:10px;box-sizing:border-box;">
+      <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;">ยืนยันรหัสผ่านใหม่</label>
+      <input type="password" id="confirmPassInput" style="width:100%;background:var(--surface-raised);border:1px solid var(--border);border-radius:9px;padding:10px 12px;color:var(--text);font-size:14px;margin-bottom:14px;box-sizing:border-box;">
+      <div id="changePassStatus" style="font-size:12.5px;color:var(--err);min-height:18px;margin-bottom:10px;"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button id="cancelChangePass" class="chip" style="cursor:pointer;">ยกเลิก</button>
+        <button id="submitChangePass" class="chip active" style="cursor:pointer;">บันทึก</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  overlay.querySelector('#cancelChangePass').addEventListener('click', () => overlay.remove());
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+  overlay.querySelector('#submitChangePass').addEventListener('click', async () => {
+    const p1 = overlay.querySelector('#newPassInput').value;
+    const p2 = overlay.querySelector('#confirmPassInput').value;
+    const statusEl = overlay.querySelector('#changePassStatus');
+    if (p1.length < 6) { statusEl.textContent = 'รหัสผ่านต้องยาวอย่างน้อย 6 ตัว'; return; }
+    if (p1 !== p2) { statusEl.textContent = 'รหัสผ่านทั้งสองช่องไม่ตรงกัน'; return; }
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: p1 }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error);
+      alert('✓ เปลี่ยนรหัสผ่านสำเร็จแล้ว');
+      overlay.remove();
+    } catch (e) {
+      statusEl.textContent = '✗ ' + e.message;
+    }
+  });
+}
+
+// ---- initial load ----
+async function init(){
+  const [statusRes, listingsRes, leadsRes] = await Promise.all([
+    fetch('/api/status').then(r => r.json()),
+    fetch('/api/listings?limit=200').then(r => r.json()),
+    fetch('/api/leads').then(r => r.json()),
+    loadNav(),
+  ]);
+  renderStatus(statusRes.sources);
+  updateRedisBanner(statusRes.redis);
+  updatedAtEl.textContent = new Date(statusRes.updatedAt).toLocaleTimeString('th-TH');
+  allListings = listingsRes.items || [];
+  savedUrls = new Set((leadsRes.leads || []).map(l => l.url));
+  renderGrid();
+}
+init();
+
+document.getElementById('refreshNowBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('refreshNowBtn');
+  const icon = document.getElementById('refreshIcon');
+  btn.disabled = true;
+  icon.classList.add('spin');
+  btn.lastChild.textContent = ' กำลังดึงข้อมูล... (อาจใช้เวลาถึง 1-2 นาทีถ้ามี Facebook)';
+
+  try {
+    const res = await fetch('/api/refresh', { method: 'POST' });
+    const data = await res.json();
+    if (data.ok) {
+      const summary = (data.results || [])
+        .map(r => r.ok ? `${SOURCE_LABELS[r.source] || r.source} +${r.newCount}` : `${SOURCE_LABELS[r.source] || r.source} ล้มเหลว`)
+        .join(' · ');
+      btn.lastChild.textContent = ' ' + (summary || 'เสร็จแล้ว');
+      await pollUpdates();
+    } else {
+      btn.lastChild.textContent = ' ดึงข้อมูลไม่สำเร็จ';
+    }
+  } catch (e) {
+    btn.lastChild.textContent = ' เกิดข้อผิดพลาด';
+  } finally {
+    icon.classList.remove('spin');
+    setTimeout(() => {
+      btn.lastChild.textContent = ' ดึงข้อมูลตอนนี้';
+      btn.disabled = false;
+    }, 5000);
+  }
+});
+
+document.getElementById('quickAddBtn').addEventListener('click', async () => {
+  const input = document.getElementById('quickAddInput');
+  const statusEl = document.getElementById('quickAddStatus');
+  const btn = document.getElementById('quickAddBtn');
+  const url = input.value.trim();
+  if (!url) return;
+
+  btn.disabled = true;
+  statusEl.textContent = 'กำลังดึงข้อมูล...';
+  try {
+    const res = await fetch('/api/marketplace/quick-add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+    statusEl.textContent = data.isNew
+      ? `✓ เพิ่ม "${data.listing.title}" เข้าระบบแล้ว`
+      : `ℹ️ ประกาศนี้มีอยู่ในระบบแล้ว (${data.listing.title})`;
+    if (data.isNew) addFreshListings([data.listing]);
+    input.value = '';
+  } catch (e) {
+    statusEl.textContent = '✗ ' + e.message;
+  } finally {
+    btn.disabled = false;
+    setTimeout(() => { statusEl.textContent = ''; }, 8000);
+  }
+});
+
+// ---- อัปเดตแบบสด: โพลข้อมูลจากเซิร์ฟเวอร์เป็นระยะแทน WebSocket ----
+// (เลือกใช้วิธีนี้เพื่อให้ deploy บน hosting ฟรีที่ไม่รองรับ WebSocket ค้างได้ เช่น Render free tier
+//  ดีเลย์ที่เพิ่มมา ~8 วิ ไม่มีผลในทางปฏิบัติ เพราะรถมือสองไม่ได้เข้าใหม่ทุกวินาทีอยู่แล้ว)
+async function pollUpdates(){
+  try {
+    const [statusRes, listingsRes] = await Promise.all([
+      fetch('/api/status').then(r => r.json()),
+      fetch('/api/listings?limit=200').then(r => r.json()),
+    ]);
+    renderStatus(statusRes.sources);
+    updateRedisBanner(statusRes.redis);
+    updatedAtEl.textContent = new Date(statusRes.updatedAt).toLocaleTimeString('th-TH');
+
+    const knownUrls = new Set(allListings.map(l => l.url));
+    const newOnes = (listingsRes.items || []).filter(l => !knownUrls.has(l.url));
+    if (newOnes.length > 0) addFreshListings(newOnes);
+  } catch (e) {
+    console.error('poll failed', e);
+  }
+}
+setInterval(pollUpdates, 8000);
+</script>
+</body>
+</html>

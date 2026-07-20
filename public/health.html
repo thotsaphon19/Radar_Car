@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>สถานะการเชื่อมต่อ — เรดาร์รถมือสอง</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0F1114; --surface:#181B20; --surface-raised:#20242B; --border:#2A2E36;
+    --text:#F2F3F5; --text-muted:#8B93A0;
+    --accent:#FF5A36; --ok:#34D399; --err:#F04438; --idle:#5B626E; --warn:#F5A623;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:radial-gradient(1200px 600px at 15% -10%, rgba(255,90,54,0.08), transparent 60%), var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  a{color:inherit;}
+  header{max-width:1100px;margin:0 auto;padding:28px 24px 0;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  h1{font-family:'Space Grotesk',sans-serif;font-size:21px;margin:0 0 4px;}
+  .sub{color:var(--text-muted);font-size:13px;}
+  .nav-links{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .nav-link{font-size:13px;color:var(--text-muted);text-decoration:none;border:1px solid var(--border);padding:8px 14px;border-radius:999px;}
+  .nav-link:hover{color:var(--text);border-color:var(--accent);}
+  .check-all-btn{background:var(--accent);color:#fff;border:none;border-radius:999px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;}
+  .check-all-btn:hover{filter:brightness(1.08);}
+  .check-all-btn:disabled{opacity:.6;cursor:default;}
+
+  main{max-width:1100px;margin:0 auto;padding:20px 24px 60px;}
+  .last-checked{color:var(--text-muted);font-size:12.5px;margin-bottom:16px;}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;}
+  .card{
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    padding:18px 20px;
+  }
+  .card.ok{border-color:rgba(52,211,153,0.35);}
+  .card.error{border-color:rgba(240,68,56,0.45);}
+  .card.warn{border-color:rgba(245,166,35,0.45);}
+  .card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .card-name{font-weight:600;font-size:14.5px;display:flex;align-items:center;gap:8px;}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--idle);flex-shrink:0;}
+  .dot.ok{background:var(--ok);box-shadow:0 0 0 3px rgba(52,211,153,0.18);}
+  .dot.error{background:var(--err);box-shadow:0 0 0 3px rgba(240,68,56,0.18);}
+  .dot.warn{background:var(--warn);box-shadow:0 0 0 3px rgba(245,166,35,0.18);}
+  .dot.idle{background:var(--idle);}
+  .card-msg{font-size:12.5px;color:var(--text-muted);line-height:1.6;min-height:36px;}
+  .card-actions{display:flex;gap:8px;margin-top:12px;}
+  .mini-btn{
+    background:var(--surface-raised);border:1px solid var(--border);color:var(--text);
+    border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer;
+  }
+  .mini-btn:hover{border-color:var(--accent);}
+  .mini-btn:disabled{opacity:.5;cursor:default;}
+  .mini-btn.restart{color:var(--warn);border-color:rgba(245,166,35,0.4);}
+
+  .section-title{font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin:26px 0 12px;}
+
+  .provider-toggles{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:9px;}
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12.5px;}
+  .toggle-row .p-label{display:flex;align-items:center;gap:6px;}
+  .toggle-row .p-note{font-size:10.5px;color:var(--text-muted);}
+  .switch{position:relative;display:inline-block;width:38px;height:21px;flex-shrink:0;}
+  .switch input{opacity:0;width:0;height:0;position:absolute;}
+  .switch .slider{position:absolute;inset:0;background:var(--surface-raised);border:1px solid var(--border);border-radius:999px;cursor:pointer;transition:.15s;}
+  .switch .slider:before{position:absolute;content:"";height:15px;width:15px;left:2px;top:2px;background:var(--text-muted);border-radius:50%;transition:.15s;}
+  .switch input:checked + .slider{background:rgba(52,211,153,0.22);border-color:var(--ok);}
+  .switch input:checked + .slider:before{transform:translateX(16px);background:var(--ok);}
+  .switch input:disabled + .slider{opacity:.4;cursor:not-allowed;}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🩺 สถานะการเชื่อมต่อ</h1>
+    <div class="sub">เช็คทุกบริการภายนอกแบบทดสอบจริง — token หมดอายุ, เครดิตใกล้หมด, หรือเชื่อมต่อหลุด จะเห็นที่นี่ทันที</div>
+  </div>
+  <div class="nav-links">
+    <button class="check-all-btn" id="checkAllBtn">🔄 เช็คทั้งหมดตอนนี้</button>
+    <a class="nav-link" href="/logs.html">📜 Log แบบ Live</a>
+    <a class="nav-link" href="/">← แดชบอร์ด</a>
+  </div>
+</header>
+
+<main>
+  <div class="last-checked" id="lastChecked">ยังไม่เคยเช็ค — กด "เช็คทั้งหมดตอนนี้"</div>
+
+  <div class="section-title">การเชื่อมต่อบริการภายนอก</div>
+  <div class="grid" id="connectionsGrid"></div>
+
+  <div class="section-title">สถานะการดึงข้อมูล (ตัวสแกนแต่ละแหล่ง)</div>
+  <div class="grid" id="scrapersGrid"></div>
+</main>
+
+<script>
+const CONNECTION_META = {
+  redis:         { label: 'Upstash Redis',        icon: '🗄️', restartKey: 'redis' },
+  apify:         { label: 'Apify',                 icon: '🤖', restartKey: 'apify' },
+  brightdata:    { label: 'Bright Data',           icon: '☀️', restartKey: 'brightdata' },
+  googleSheets:  { label: 'Google Sheets',         icon: '📊', restartKey: 'googleSheets' },
+  line:          { label: 'LINE Messaging API',    icon: '💬', restartKey: 'line' },
+  one2car:       { label: 'One2Car (เว็บไซต์)',    icon: '🚗', restartKey: 'one2car' },
+  kaidee:        { label: 'Kaidee (เว็บไซต์)',     icon: '🚙', restartKey: 'kaidee' },
+  renderBackend: { label: 'Backend เดิม (ถ้าตั้งค่าไว้)', icon: '🔗', restartKey: 'renderBackend' },
+};
+
+function statusClass(ok) {
+  if (ok === true) return 'ok';
+  if (ok === false) return 'error';
+  return 'idle'; // null = ยังไม่ได้ตั้งค่า ไม่ใช่ error
+}
+
+// เก็บสถานะเปิด/ปิด provider (Bright Data/Apify/Watcher) ที่โหลดจาก /api/providers ไว้ใช้ตอน render
+// การ์ด — โหลดใหม่ทุกครั้งก่อนวาดการ์ด (loadScraperStatusOnly/checkAll) ให้ตรงกับของจริงเสมอ
+let providerData = null;
+async function loadProviderData() {
+  try {
+    const res = await fetch('/api/providers');
+    const data = await res.json();
+    if (data.ok) providerData = data;
+  } catch (e) { /* เงียบไว้ — การ์ดจะแสดงแบบไม่มีปุ่ม toggle แทน ไม่ทำหน้าพัง */ }
+}
+
+const PROVIDER_META = [
+  { key: 'brightdata', label: '☀️ Bright Data' },
+  { key: 'apify', label: '🤖 Apify' },
+  { key: 'watcher', label: '🕵️ Watcher (Puppeteer)' },
+];
+
+// sourceParam ต้องเป็น "marketplace" หรือ "group" (ตรงกับ path /api/providers/:source/:provider)
+function providerTogglesHTML(sourceParam) {
+  if (!providerData) return '';
+  const toggles = providerData.toggles?.[sourceParam] || {};
+  const avail = providerData.availability || {};
+  return `
+    <div class="provider-toggles">
+      ${PROVIDER_META.map(p => `
+        <label class="toggle-row">
+          <span class="p-label">${p.label}${avail[p.key] ? '' : ' <span class="p-note">(ยังไม่ตั้งค่า credential)</span>'}</span>
+          <span class="switch">
+            <input type="checkbox" class="provider-toggle" data-source="${sourceParam}" data-provider="${p.key}"
+              ${toggles[p.key] ? 'checked' : ''} ${avail[p.key] ? '' : 'disabled'}>
+            <span class="slider"></span>
+          </span>
+        </label>
+      `).join('')}
+    </div>
+  `;
+}
+
+function connectionCardHTML(key, result) {
+  const meta = CONNECTION_META[key];
+  if (!meta) return '';
+  const cls = statusClass(result?.ok);
+  const msg = result?.message || 'ยังไม่ได้เช็ค';
+  return `
+    <div class="card ${cls}" data-key="${key}">
+      <div class="card-top">
+        <span class="card-name">${meta.icon} ${meta.label}</span>
+        <span class="dot ${cls}"></span>
+      </div>
+      <div class="card-msg">${msg}</div>
+      <div class="card-actions">
+        <button class="mini-btn restart-btn" data-service="${meta.restartKey}">🔄 เช็คใหม่</button>
+      </div>
+    </div>
+  `;
+}
+
+function scraperCardHTML(key, s) {
+  const cls = statusClass(s.state === 'ok' ? true : s.state === 'error' ? false : null);
+  const lastSync = s.lastSync ? new Date(s.lastSync).toLocaleTimeString('th-TH') : 'ยังไม่เคยดึง';
+  return `
+    <div class="card ${cls}">
+      <div class="card-top">
+        <span class="card-name">${s.label}</span>
+        <span class="dot ${cls}"></span>
+      </div>
+      <div class="card-msg">
+        ดึงล่าสุด: <b class="mono" style="color:var(--text);">${lastSync}</b><br>
+        ${s.lastError ? `⚠️ ${s.lastError}` : `เจอล่าสุด ${s.lastCount || 0} รายการ · วันนี้รวม ${s.todayCount || 0} รายการ`}
+      </div>
+      ${key === 'facebook_marketplace' ? `
+        ${providerTogglesHTML('marketplace')}
+        <div class="card-actions">
+          <button class="mini-btn restart restart-watcher-btn" data-watcher="facebook_marketplace_watcher">🔄 รีสตาร์ท Marketplace watcher</button>
+        </div>
+      ` : ''}
+      ${key === 'facebook_group' ? `
+        ${providerTogglesHTML('group')}
+        <div class="card-actions">
+          <button class="mini-btn restart restart-watcher-btn" data-watcher="facebook_group_watcher">🔄 รีสตาร์ท Group watcher</button>
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+async function checkAll() {
+  const btn = document.getElementById('checkAllBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ กำลังเช็ค... (อาจใช้เวลาถึง 30 วิ)';
+
+  try {
+    const res = await fetch('/api/health/check');
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error);
+
+    const connGrid = document.getElementById('connectionsGrid');
+    connGrid.innerHTML = Object.keys(CONNECTION_META)
+      .map(key => connectionCardHTML(key, data.checks[key]))
+      .join('');
+
+    await loadProviderData();
+    const scraperGrid = document.getElementById('scrapersGrid');
+    scraperGrid.innerHTML = Object.entries(data.scraperStatus)
+      .map(([key, s]) => scraperCardHTML(key, s))
+      .join('');
+
+    document.getElementById('lastChecked').textContent =
+      'เช็คล่าสุด: ' + new Date(data.checks.checkedAt).toLocaleString('th-TH');
+
+    attachButtonHandlers();
+  } catch (e) {
+    document.getElementById('lastChecked').textContent = '✗ เช็คไม่สำเร็จ: ' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔄 เช็คทั้งหมดตอนนี้';
+  }
+}
+
+function attachButtonHandlers() {
+  document.querySelectorAll('.restart-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const service = btn.dataset.service;
+      btn.disabled = true;
+      btn.textContent = '⏳...';
+      try {
+        const res = await fetch('/api/health/restart/' + service, { method: 'POST' });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+        await checkAll();
+      } catch (e) {
+        alert('เช็คใหม่ไม่สำเร็จ: ' + e.message);
+        btn.disabled = false;
+        btn.textContent = '🔄 เช็คใหม่';
+      }
+    });
+  });
+
+  document.querySelectorAll('.restart-watcher-btn').forEach(watcherBtn => {
+    watcherBtn.addEventListener('click', async () => {
+      const originalText = watcherBtn.textContent;
+      const watcherKey = watcherBtn.dataset.watcher;
+      watcherBtn.disabled = true;
+      watcherBtn.textContent = '⏳ กำลังรีสตาร์ท...';
+      try {
+        const res = await fetch('/api/health/restart/' + watcherKey, { method: 'POST' });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+        alert('✓ ' + data.message);
+        await checkAll();
+      } catch (e) {
+        alert('✗ ' + e.message);
+      } finally {
+        watcherBtn.disabled = false;
+        watcherBtn.textContent = originalText;
+      }
+    });
+  });
+
+  // ปุ่มเปิด/ปิด provider (Bright Data/Apify/Watcher) — มีผลทันทีที่เซิร์ฟเวอร์ ไม่ต้องรีสตาร์ท
+  document.querySelectorAll('.provider-toggle').forEach(toggle => {
+    toggle.addEventListener('change', async () => {
+      const { source, provider } = toggle.dataset;
+      const enabled = toggle.checked;
+      toggle.disabled = true;
+      try {
+        const res = await fetch(`/api/providers/${source}/${provider}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled }),
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error);
+        await loadScraperStatusOnly(); // วาดการ์ดใหม่ให้ตรงกับสถานะล่าสุดจริงๆ
+      } catch (e) {
+        alert('เปลี่ยนสถานะไม่สำเร็จ: ' + e.message);
+        toggle.checked = !enabled;
+        toggle.disabled = false;
+      }
+    });
+  });
+}
+
+document.getElementById('checkAllBtn').addEventListener('click', checkAll);
+
+// โหลดสถานะตัวสแกน (ไม่ต้องรอ full health check) ตั้งแต่เปิดหน้า
+async function loadScraperStatusOnly() {
+  try {
+    await loadProviderData();
+    const res = await fetch('/api/status');
+    const data = await res.json();
+    document.getElementById('scrapersGrid').innerHTML = Object.entries(data.sources)
+      .map(([key, s]) => scraperCardHTML(key, s))
+      .join('');
+    attachButtonHandlers();
+  } catch (e) { /* เงียบไว้ รอกด เช็คทั้งหมด แทน */ }
+}
+loadScraperStatusOnly();
+</script>
+</body>
+</html>

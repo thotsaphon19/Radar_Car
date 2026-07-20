@@ -1,0 +1,24 @@
+{
+  "name": "car-scraper-realtime",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ระบบดึงรถมือสองแบบเรียลไทม์ + แดชบอร์ด",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@upstash/redis": "^1.38.0",
+    "axios": "^1.18.1",
+    "bcryptjs": "^2.4.3",
+    "cheerio": "^1.2.0",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.2",
+    "express-session": "^1.19.0",
+    "googleapis": "^140.0.1",
+    "puppeteer": "^22.15.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "rss-parser": "^3.13.0"
+  }
+}

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>รถที่ต้องการ — เรดาร์รถมือสอง</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0F1114; --surface:#181B20; --surface-raised:#20242B; --border:#2A2E36;
+    --text:#F2F3F5; --text-muted:#8B93A0; --accent:#FF5A36; --ok:#34D399; --err:#F04438;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:radial-gradient(1200px 600px at 15% -10%, rgba(255,90,54,0.08), transparent 60%), var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  a{color:inherit;}
+  header{max-width:1360px;margin:0 auto;padding:28px 24px 0;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  h1{font-family:'Space Grotesk',sans-serif;font-size:21px;margin:0 0 4px;}
+  .sub{color:var(--text-muted);font-size:13px;}
+  .nav-links{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .nav-link{font-size:13px;color:var(--text-muted);text-decoration:none;border:1px solid var(--border);padding:8px 14px;border-radius:999px;}
+  .nav-link:hover{color:var(--text);border-color:var(--accent);}
+
+  main{max-width:1360px;margin:0 auto;padding:20px 24px 60px;}
+  .board{display:grid;grid-template-columns:repeat(5,minmax(220px,1fr));gap:14px;overflow-x:auto;}
+  @media (max-width:1100px){ .board{grid-template-columns:repeat(5,260px);} }
+  .col{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;min-height:200px;}
+  .col-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .col-title{font-size:13.5px;font-weight:600;}
+  .col-count{font-size:11.5px;color:var(--text-muted);background:var(--surface-raised);padding:2px 8px;border-radius:999px;}
+
+  .lead-card{background:var(--surface-raised);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px;}
+  .lead-img{width:100%;aspect-ratio:16/10;object-fit:cover;display:block;background:#22262E;}
+  .lead-body{padding:10px 11px;}
+  .lead-title{font-size:12.5px;line-height:1.4;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .lead-price{font-size:14px;font-weight:600;margin-bottom:8px;}
+  .lead-note{
+    width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;
+    padding:6px 8px;color:var(--text);font-size:11.5px;font-family:'Inter',sans-serif;resize:none;
+    margin-bottom:8px;
+  }
+  .lead-note:focus{outline:none;border-color:var(--accent);}
+  .lead-actions{display:flex;gap:6px;align-items:center;}
+  .lead-status-select{
+    flex:1;background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text);
+    font-size:11.5px;padding:6px;font-family:'Inter',sans-serif;
+  }
+  .lead-remove{background:none;border:1px solid var(--border);color:var(--text-muted);border-radius:7px;padding:6px 9px;font-size:11.5px;cursor:pointer;}
+  .lead-remove:hover{border-color:var(--err);color:var(--err);}
+  .lead-link{font-size:10.5px;color:var(--text-muted);text-decoration:none;display:block;margin-top:6px;}
+  .lead-link:hover{color:var(--accent);}
+
+  .empty-col{color:var(--text-muted);font-size:12px;text-align:center;padding:20px 6px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🚘 รถที่ต้องการ</h1>
+    <div class="sub">รถที่บันทึกไว้จากแดชบอร์ด ลากสถานะไปตามขั้นตอนการติดต่อซื้อ</div>
+  </div>
+  <div class="nav-links">
+    <a class="nav-link" href="/">← แดชบอร์ด</a>
+  </div>
+</header>
+
+<main>
+  <div class="board" id="board"></div>
+</main>
+
+<script>
+const STATUSES = [
+  { key: 'interested', label: 'สนใจ' },
+  { key: 'contacted', label: 'ติดต่อแล้ว' },
+  { key: 'negotiating', label: 'กำลังเจรจา' },
+  { key: 'purchased', label: 'ซื้อแล้ว' },
+  { key: 'rejected', label: 'ไม่เอา' },
+];
+const PLACEHOLDER = 'data:image/svg+xml;utf8,' + encodeURIComponent(`
+  <svg xmlns="http://www.w3.org/2000/svg" width="300" height="190" viewBox="0 0 300 190">
+    <rect width="300" height="190" fill="#22262E"/>
+    <path fill="#3A3F49" d="M60 125h180l-14-36c-3-8-11-13-19-13H93c-8 0-16 5-19 13l-14 36z"/>
+    <circle cx="95" cy="128" r="13" fill="#20242B" stroke="#3A3F49" stroke-width="3"/>
+    <circle cx="215" cy="128" r="13" fill="#20242B" stroke="#3A3F49" stroke-width="3"/>
+  </svg>
+`);
+
+let leads = [];
+
+function formatPrice(price){
+  return price ? '฿' + Number(price).toLocaleString('th-TH') : 'ไม่ระบุราคา';
+}
+
+function leadCardHTML(l){
+  const imgSrc = l.image ? `/api/image-proxy?url=${encodeURIComponent(l.image)}` : PLACEHOLDER;
+  return `
+    <div class="lead-card" data-url="${encodeURIComponent(l.url)}">
+      <img class="lead-img" src="${imgSrc}" loading="lazy" onerror="this.onerror=null;this.src='${PLACEHOLDER}'">
+      <div class="lead-body">
+        <div class="lead-title">${l.title}</div>
+        <div class="lead-price mono">${formatPrice(l.price)}</div>
+        <textarea class="lead-note" rows="2" placeholder="โน้ต เช่น เบอร์ติดต่อ, นัดดูรถ...">${l.note || ''}</textarea>
+        <div class="lead-actions">
+          <select class="lead-status-select">
+            ${STATUSES.map(s => `<option value="${s.key}" ${s.key === l.status ? 'selected' : ''}>${s.label}</option>`).join('')}
+          </select>
+          <button class="lead-remove">×</button>
+        </div>
+        <a class="lead-link" href="${l.url}" target="_blank" rel="noopener">เปิดดูประกาศ ↗</a>
+      </div>
+    </div>
+  `;
+}
+
+function render(){
+  const board = document.getElementById('board');
+  board.innerHTML = STATUSES.map(s => {
+    const items = leads.filter(l => l.status === s.key);
+    return `
+      <div class="col">
+        <div class="col-head">
+          <span class="col-title">${s.label}</span>
+          <span class="col-count">${items.length}</span>
+        </div>
+        <div data-status="${s.key}">
+          ${items.length > 0 ? items.map(leadCardHTML).join('') : '<div class="empty-col">ยังไม่มีรถในสถานะนี้</div>'}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  board.querySelectorAll('.lead-card').forEach(card => {
+    const url = decodeURIComponent(card.dataset.url);
+    const lead = leads.find(l => l.url === url);
+
+    card.querySelector('.lead-status-select').addEventListener('change', (e) => {
+      saveLead({ ...lead, status: e.target.value });
+    });
+    card.querySelector('.lead-note').addEventListener('blur', (e) => {
+      saveLead({ ...lead, note: e.target.value });
+    });
+    card.querySelector('.lead-remove').addEventListener('click', async () => {
+      if (!confirm('เอาออกจากรายการที่ต้องการใช่ไหม?')) return;
+      await fetch('/api/leads?url=' + encodeURIComponent(url), { method: 'DELETE' });
+      leads = leads.filter(l => l.url !== url);
+      render();
+    });
+  });
+}
+
+async function saveLead(lead){
+  const res = await fetch('/api/leads', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(lead),
+  });
+  const data = await res.json();
+  if (data.ok) {
+    const idx = leads.findIndex(l => l.url === lead.url);
+    if (idx >= 0) leads[idx] = data.lead;
+    render();
+  }
+}
+
+async function load(){
+  const res = await fetch('/api/leads');
+  const data = await res.json();
+  leads = data.leads || [];
+  render();
+}
+load();
+// โพลแทน WebSocket — เผื่อพนักงานอีกคนแก้สถานะรถคันเดียวกันจากเครื่องอื่นพร้อมกัน
+setInterval(load, 8000);
+</script>
+</body>
+</html>

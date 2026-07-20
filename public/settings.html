@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ตั้งค่าแหล่งข้อมูล — เรดาร์รถมือสอง</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0F1114; --surface:#181B20; --surface-raised:#20242B; --border:#2A2E36;
+    --text:#F2F3F5; --text-muted:#8B93A0;
+    --accent:#FF5A36; --ok:#34D399; --err:#F04438;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:radial-gradient(1200px 600px at 15% -10%, rgba(255,90,54,0.08), transparent 60%), var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+  a{color:inherit;}
+  header{max-width:900px;margin:0 auto;padding:28px 24px 0;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+  h1{font-family:'Space Grotesk',sans-serif;font-size:21px;margin:0 0 4px;}
+  .sub{color:var(--text-muted);font-size:13px;}
+  .back-link{
+    font-size:13px;color:var(--text-muted);text-decoration:none;
+    border:1px solid var(--border);padding:8px 14px;border-radius:999px;
+  }
+  .back-link:hover{color:var(--text);border-color:var(--accent);}
+
+  main{max-width:900px;margin:0 auto;padding:24px;}
+  .card{
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    padding:22px 24px;margin-bottom:20px;
+  }
+  .card h2{font-size:16px;margin:0 0 4px;font-family:'Space Grotesk',sans-serif;}
+  .card .hint{color:var(--text-muted);font-size:13px;margin:0 0 18px;line-height:1.6;}
+
+  label{display:block;font-size:12.5px;color:var(--text-muted);margin-bottom:6px;}
+  input[type=text], input[type=number]{
+    width:100%;background:var(--surface-raised);border:1px solid var(--border);
+    border-radius:9px;padding:10px 12px;color:var(--text);font-size:14px;font-family:'Inter',sans-serif;
+  }
+  input[type=text]:focus, input[type=number]:focus{outline:none;border-color:var(--accent);}
+
+  .group-row{
+    display:grid;grid-template-columns:1fr 1.6fr 170px auto auto;gap:10px;align-items:end;
+    margin-bottom:12px;
+  }
+  @media (max-width:640px){ .group-row{grid-template-columns:1fr;} }
+  select{
+    width:100%;background:var(--surface-raised);border:1px solid var(--border);
+    border-radius:9px;padding:10px 12px;color:var(--text);font-size:14px;font-family:'Inter',sans-serif;
+  }
+  select:focus{outline:none;border-color:var(--accent);}
+  .toggle-btn{
+    width:44px;height:26px;border-radius:999px;border:1px solid var(--border);
+    background:var(--surface-raised);position:relative;cursor:pointer;flex-shrink:0;
+  }
+  .toggle-btn .knob{
+    position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;
+    background:var(--text-muted);transition:all .18s;
+  }
+  .toggle-btn.on{background:rgba(52,211,153,0.2);border-color:var(--ok);}
+  .toggle-btn.on .knob{left:20px;background:var(--ok);}
+  .remove-btn{
+    background:none;border:1px solid var(--border);color:var(--text-muted);
+    border-radius:9px;padding:10px 12px;cursor:pointer;font-size:13px;
+  }
+  .remove-btn:hover{border-color:var(--err);color:var(--err);}
+  .add-btn{
+    background:none;border:1px dashed var(--border);color:var(--text-muted);
+    border-radius:9px;padding:10px 16px;cursor:pointer;font-size:13.5px;width:100%;margin-top:4px;
+  }
+  .add-btn:hover{border-color:var(--accent);color:var(--text);}
+  .empty-hint{color:var(--text-muted);font-size:13px;padding:10px 0;}
+
+  .mode-switch{display:flex;gap:8px;margin-bottom:18px;}
+  .mode-btn{
+    flex:1;padding:10px;border-radius:9px;border:1px solid var(--border);
+    background:var(--surface-raised);color:var(--text-muted);cursor:pointer;font-size:13.5px;text-align:center;
+  }
+  .mode-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;}
+
+  .keyword-row{margin-bottom:18px;}
+  .province-grid{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px;margin-bottom:14px;
+  }
+  .province-card{
+    background:var(--surface-raised);border:1px solid var(--border);border-radius:9px;
+    padding:9px 12px;
+  }
+  .province-card.on{border-color:var(--ok);background:rgba(52,211,153,0.08);}
+  .province-chip{
+    display:flex;align-items:center;gap:8px;
+    font-size:13.5px;cursor:pointer;user-select:none;margin-bottom:6px;
+  }
+  .province-chip input{accent-color:var(--ok);}
+  .province-priority{font-size:12px;padding:5px 8px;}
+
+  .maxitem-row{max-width:260px;}
+
+  .discover-row{
+    display:flex;align-items:flex-start;gap:12px;
+    padding:12px;border:1px solid var(--border);border-radius:9px;
+    margin-bottom:8px;background:var(--surface-raised);
+  }
+  .discover-row input[type=checkbox]{margin-top:3px;accent-color:var(--ok);width:16px;height:16px;flex-shrink:0;}
+  .discover-row .d-body{flex:1;min-width:0;}
+  .discover-row .d-name{font-size:14px;font-weight:600;margin-bottom:2px;}
+  .discover-row .d-desc{font-size:12.5px;color:var(--text-muted);line-height:1.5;}
+  .discover-row .d-meta{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;}
+  .meta-badge{
+    font-size:11px;padding:2px 8px;border-radius:999px;
+    background:rgba(255,255,255,0.06);color:var(--text-muted);
+  }
+  .discover-row a{font-size:12px;color:var(--accent);text-decoration:none;}
+
+  .test-stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+  .test-stat{
+    background:var(--surface-raised);border:1px solid var(--border);border-radius:9px;
+    padding:10px 14px;flex:1;min-width:140px;
+  }
+  .test-stat .num{font-size:20px;font-weight:700;font-family:'JetBrains Mono',monospace;}
+  .test-stat .lbl{font-size:11px;color:var(--text-muted);margin-top:2px;}
+  .test-stat.warn{border-color:rgba(255,90,54,0.4);}
+  .test-sample-row{
+    display:flex;gap:10px;align-items:center;padding:8px 10px;
+    background:var(--surface-raised);border-radius:8px;margin-bottom:6px;font-size:13px;
+  }
+  .test-sample-row img{width:44px;height:32px;object-fit:cover;border-radius:5px;flex-shrink:0;background:#22262E;}
+  .test-raw-box{
+    background:var(--bg);border:1px solid var(--border);border-radius:8px;
+    padding:10px 12px;font-size:11px;color:var(--text-muted);white-space:pre-wrap;
+    max-height:220px;overflow:auto;margin-top:10px;font-family:'JetBrains Mono',monospace;
+  }
+  .test-error{
+    color:var(--err);border:1px solid rgba(240,68,56,0.4);border-radius:9px;
+    padding:10px 12px;font-size:13px;background:rgba(240,68,56,0.06);
+  }
+
+  .save-bar{
+    position:sticky;bottom:0;
+    background:linear-gradient(to top, var(--bg) 60%, transparent);
+    padding:20px 0 24px;
+    display:flex;justify-content:flex-end;gap:10px;align-items:center;
+  }
+  .save-status{font-size:13px;color:var(--text-muted);}
+  .save-status.ok{color:var(--ok);}
+  .save-btn{
+    background:var(--accent);color:#fff;border:none;border-radius:10px;
+    padding:12px 26px;font-size:14.5px;font-weight:600;cursor:pointer;
+  }
+  .save-btn:hover{filter:brightness(1.08);}
+  .save-btn:disabled{opacity:.6;cursor:default;}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>⚙️ ตั้งค่าแหล่งข้อมูล</h1>
+    <div class="sub">กำหนดกลุ่ม Facebook ที่จะติดตาม และขอบเขตการค้นหาใน Marketplace</div>
+  </div>
+  <a class="back-link" href="/health.html" style="margin-right:8px;">🩺 สถานะเชื่อมต่อ</a>
+  <a class="back-link" href="/logs.html" style="margin-right:8px;">📜 Log</a>
+  <a class="back-link" href="/users.html" style="margin-right:8px;">👥 ผู้ใช้</a>
+  <a class="back-link" href="/">← กลับแดชบอร์ด</a>
+</header>
+
+<main>
+  <div class="card">
+    <h2>🔎 ค้นหากลุ่ม Facebook รถมือสองอัตโนมัติ</h2>
+    <p class="hint">ใส่คำค้นหา ระบบจะค้นหากลุ่ม Facebook ที่เกี่ยวข้อง แล้ว<b style="color:var(--text);">เพิ่มเข้ารายการติดตาม + บันทึก + เริ่มดึงข้อมูลให้ทันทีอัตโนมัติ</b> ไม่ต้องกดเลือกทีละกลุ่ม — ถ้าไม่อยากติดตามกลุ่มไหน ลบออกได้ทีหลังในรายการด้านล่าง</p>
+    <div class="group-row" style="grid-template-columns:1fr auto;">
+      <div>
+        <label>คำค้นหา (คั่นด้วยจุลภาค)</label>
+        <input type="text" id="discoverKeywords" value="รถมือสอง, ซื้อขายรถมือสอง, เต็นท์รถมือสอง">
+      </div>
+      <div>
+        <label>&nbsp;</label>
+        <button class="save-btn" id="discoverBtn" style="padding:10px 20px;">ค้นหา</button>
+      </div>
+    </div>
+    <div id="discoverStatus" class="hint" style="margin:8px 0 0;"></div>
+    <div id="discoverResults" style="margin-top:14px;"></div>
+  </div>
+
+  <div class="card">
+    <h2>กลุ่ม Facebook ที่ติดตามอยู่</h2>
+    <p class="hint">ใส่ลิงก์กลุ่มซื้อขายรถมือสองที่ต้องการให้ระบบติดตาม (ต้องเป็นกลุ่มสาธารณะ) เพิ่มได้ไม่จำกัดจำนวนกลุ่ม ปิดสวิตช์ไว้ถ้าอยากหยุดดึงกลุ่มนั้นชั่วคราวโดยไม่ต้องลบทิ้ง</p>
+    <p class="hint" style="border:1px solid rgba(52,211,153,0.35);border-radius:9px;padding:10px 12px;background:rgba(52,211,153,0.06);">
+      🎯 <b style="color:var(--text);">ไม่อยากหากลุ่มเอง?</b> กดปุ่มด้านล่างเพื่อใช้กลุ่มซื้อขายรถมือสองที่คัดมาให้แล้ว (หากลุ่มจริงที่แอ็กทีฟอยู่ผ่านการค้นหา ไม่ใช่จาก actor ค้นหาอัตโนมัติที่ไม่เสถียร) — เพิ่ม/บันทึก/เริ่มดึงข้อมูลให้ทันที
+    </p>
+    <button class="add-btn" id="useSuggestedBtn" style="border-color:rgba(52,211,153,0.4);color:var(--ok);margin-bottom:14px;">🎯 ใช้กลุ่มแนะนำ (7 กลุ่ม)</button>
+    <div id="suggestedStatus" class="hint" style="margin:0 0 10px;"></div>
+    <div id="groupList"></div>
+    <div class="empty-hint" id="groupEmptyHint" style="display:none;">ยังไม่มีกลุ่มที่ตั้งค่าไว้ — กดเพิ่มกลุ่มด้านล่าง หรือใช้กลุ่มแนะนำด้านบน</div>
+    <button class="add-btn" id="addGroupBtn">+ เพิ่มกลุ่ม Facebook เอง</button>
+  </div>
+
+  <div class="card">
+    <h2>Facebook Marketplace</h2>
+    <p class="hint">Marketplace ไม่มีตัวเลือก "ทั้งประเทศ" ให้เลือกตรงๆ ระบบจะยิงค้นหาแยกทีละจังหวัดตามที่เลือกไว้แล้วรวมผลลัพธ์ให้ ยิ่งเลือกหลายจังหวัดยิ่งครอบคลุม แต่ก็ใช้เวลา/ค่าใช้จ่ายมากขึ้นตามจำนวนจังหวัด</p>
+    <p class="hint" style="color:var(--accent);border:1px solid rgba(255,90,54,0.3);border-radius:9px;padding:10px 12px;background:rgba(255,90,54,0.06);">
+      💰 <b>เรื่องค่าใช้จ่าย Apify:</b> ค่า default ตั้งไว้ประหยัดสุด (เจาะจงพื้นที่เดียว + ดึงทุก 30 นาที) เพื่อให้พอดีกับเครดิตฟรี $5/เดือน
+      ถ้าเปิด "ทั่วประเทศ" หรือเพิ่มจังหวัด จะดึงถี่/หลายจุดขึ้น มีโอกาสใช้เครดิตเกินฟรีและต้องจ่ายเพิ่ม — ทดสอบดูที่ Apify Billing ก่อนเปิดใช้จริงกับลูกค้า
+    </p>
+    <p class="hint" style="border:1px solid rgba(52,211,153,0.35);border-radius:9px;padding:10px 12px;background:rgba(52,211,153,0.06);">
+      📍 <b style="color:var(--text);">พื้นที่ค้นหา:</b> ใส่แค่ชื่อเมืองภาษาอังกฤษตัวพิมพ์เล็ก ไม่มีเว้นวรรค เช่น
+      <span class="mono">bangkok</span>, <span class="mono">chiangmai</span>, <span class="mono">phuket</span>
+      — ไม่ต้องหา Location ID ตัวเลขให้ยุ่งยากอีกต่อไป (จังหวัดหลักๆ ใส่ไว้ให้แล้วด้านล่าง)
+    </p>
+
+    <div class="keyword-row">
+      <label>คำค้นหาเพิ่มเติม (ไม่บังคับ)</label>
+      <input type="text" id="keyword" placeholder="เว้นว่างไว้ก็ได้ — ระบบค้นหา 12 รุ่นเป้าหมายให้อัตโนมัติอยู่แล้ว">
+      <p class="hint" style="margin-top:6px;">
+        🚗 ระบบค้นหาเฉพาะรุ่นที่กำหนดไว้ล่วงหน้าให้อัตโนมัติทุกแหล่งข้อมูลอยู่แล้ว (กระบะ: Hilux, D-Max,
+        Ranger, Triton, Navara, BT-50, Colorado, MG Extender · SUV/PPV: Fortuner, MU-X, Everest, Terra) —
+        แก้รายการได้ที่ <span class="mono">src/targetModels.js</span> ช่องนี้ใช้เผื่ออยากเพิ่มคำค้นหาอื่น
+        นอกเหนือจากรุ่นเป้าหมายเท่านั้น
+      </p>
+    </div>
+
+    <div class="mode-switch">
+      <div class="mode-btn" id="modeNationwide">ทั่วประเทศ (หลายจังหวัด)</div>
+      <div class="mode-btn" id="modeSingle">เจาะพื้นที่เดียว</div>
+    </div>
+
+    <div id="nationwideSection">
+      <label>เลือกจังหวัด/พื้นที่ที่จะค้นหา</label>
+      <div class="province-grid" id="provinceGrid"></div>
+      <button class="add-btn" id="addProvinceBtn">+ เพิ่มพื้นที่เอง</button>
+    </div>
+
+    <div id="singleSection" style="display:none;">
+      <label>ชื่อเมือง (ภาษาอังกฤษตัวพิมพ์เล็ก ไม่มีเว้นวรรค)</label>
+      <input type="text" id="singleLocation" placeholder="เช่น bangkok">
+    </div>
+
+    <div class="maxitem-row" style="margin-top:18px;">
+      <label>จำนวนประกาศสูงสุดต่อจุดค้นหา</label>
+      <input type="number" id="maxItems" min="10" max="200" step="10">
+    </div>
+
+    <div style="margin-top:20px;padding-top:18px;border-top:1px solid var(--border);">
+      <label style="margin-bottom:10px;">ทดสอบดึงข้อมูลจริงตามค่าด้านบน (ยังไม่บันทึกก็ทดสอบได้ — ใช้ค่าที่บันทึกไว้ล่าสุด)</label>
+      <button class="add-btn" id="testMarketplaceBtn" style="border-style:solid;">🔎 ทดสอบดึงข้อมูลตอนนี้</button>
+      <div id="testMarketplaceResult" style="margin-top:12px;"></div>
+    </div>
+  </div>
+
+  <div class="save-bar">
+    <span class="save-status" id="saveStatus"></span>
+    <button class="save-btn" id="saveBtn">บันทึกการตั้งค่า</button>
+  </div>
+</main>
+
+<script>
+let state = null;
+
+// กลุ่มซื้อขายรถมือสองที่หาให้แล้วผ่านการค้นหาจริง (ไม่ใช่จาก actor ค้นหาอัตโนมัติที่ไม่เสถียร)
+// เอาไว้ให้กดใช้ได้ทันทีโดยไม่ต้องหากลุ่มเอง — ควรเช็คเป็นระยะว่ากลุ่มยังแอ็กทีฟ/มีคุณภาพดีอยู่ไหม
+const SUGGESTED_GROUPS = [
+  { label: 'รวมรถมือสอง สวยพร้อมใช้งานได้ทันที', url: 'https://www.facebook.com/groups/725273349475636/' },
+  { label: 'ซื้อขายรถมือสอง รถบ้าน เจ้าของขายเอง สภาพดี 90%++', url: 'https://www.facebook.com/groups/466982883484793/' },
+  { label: 'ซื้อขายรถกระบะมือสองราคาถูก', url: 'https://www.facebook.com/groups/721762844572742/' },
+  { label: 'ซื้อขายรถยนต์มือสองกรุงเทพ-ปริมณฑล ทุกชนิด', url: 'https://www.facebook.com/groups/1797916023820036/' },
+  { label: 'รถยนต์มือสองขายถูกจากทั่วประเทศ', url: 'https://www.facebook.com/groups/1641571262734980/' },
+  { label: 'ซื้อขายรถยนต์มือสองทุกชนิด', url: 'https://www.facebook.com/groups/122876658312244/' },
+  { label: 'ซื้อขายรถยนต์-รถมอเตอร์ไซค์ มือหนึ่ง-มือสอง ทุกประเภท', url: 'https://www.facebook.com/groups/2093528287355684/' },
+];
+
+async function useSuggestedGroups(){
+  const statusEl = document.getElementById('suggestedStatus');
+  const btn = document.getElementById('useSuggestedBtn');
+  btn.disabled = true;
+
+  let addedCount = 0;
+  SUGGESTED_GROUPS.forEach(g => {
+    const exists = state.facebookGroups.some(existing => existing.url === g.url);
+    if (!exists) {
+      state.facebookGroups.push({ label: g.label, url: g.url, enabled: true });
+      addedCount++;
+    }
+  });
+  renderGroups();
+
+  if (addedCount === 0) {
+    statusEl.textContent = 'มีกลุ่มแนะนำทั้งหมดอยู่ในรายการติดตามอยู่แล้ว';
+    btn.disabled = false;
+    return;
+  }
+
+  statusEl.textContent = `เพิ่ม ${addedCount} กลุ่มแล้ว — กำลังบันทึกและเริ่มดึงข้อมูล...`;
+  try {
+    const saveRes = await fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        facebookGroups: state.facebookGroups,
+        marketplace: {
+          keyword: document.getElementById('keyword').value.trim() || 'รถมือสอง',
+          nationwide: state.marketplace.nationwide !== false,
+          singleLocation: document.getElementById('singleLocation').value.trim() || 'bangkok',
+          locations: state.marketplace.locations,
+          maxItemsPerLocation: Number(document.getElementById('maxItems').value) || 20,
+        },
+      }),
+    });
+    const saveData = await saveRes.json();
+    if (!saveData.ok) throw new Error(saveData.error);
+    state = saveData.settings;
+    renderAll();
+
+    const refreshRes = await fetch('/api/refresh/facebook_group', { method: 'POST' });
+    const refreshData = await refreshRes.json();
+    if (refreshData.ok && refreshData.result.ok) {
+      statusEl.textContent = `✓ เพิ่ม ${addedCount} กลุ่ม บันทึกและดึงข้อมูลรอบแรกเสร็จแล้ว — พบรถใหม่ ${refreshData.result.newCount} คัน ไปดูที่แดชบอร์ดหลักได้เลย`;
+    } else {
+      statusEl.textContent = `✓ เพิ่มและบันทึก ${addedCount} กลุ่มแล้ว แต่ดึงข้อมูลรอบแรกไม่สำเร็จ: ${refreshData.result?.error || refreshData.error} (รอบถัดไปจะลองใหม่อัตโนมัติ)`;
+    }
+  } catch (e) {
+    statusEl.textContent = '✗ บันทึกไม่สำเร็จ: ' + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+document.getElementById('useSuggestedBtn').addEventListener('click', useSuggestedGroups);
+
+function groupRowHTML(g, i){
+  const priority = g.priority || 'normal';
+  return `
+    <div class="group-row" data-idx="${i}">
+      <div>
+        <label>ชื่อกลุ่ม (ไว้แสดงผลเฉยๆ)</label>
+        <input type="text" class="g-label" value="${g.label || ''}" placeholder="เช่น กลุ่มซื้อขายรถมือสองอีสาน">
+      </div>
+      <div>
+        <label>ลิงก์กลุ่ม Facebook</label>
+        <input type="text" class="g-url" value="${g.url || ''}" placeholder="https://www.facebook.com/groups/...">
+      </div>
+      <div>
+        <label>ความถี่สแกน (ประหยัด Apify CU)</label>
+        <select class="g-priority">
+          <option value="high" ${priority === 'high' ? 'selected' : ''}>สูง — โพสต์ใหม่บ่อย</option>
+          <option value="normal" ${priority === 'normal' ? 'selected' : ''}>ปกติ</option>
+          <option value="low" ${priority === 'low' ? 'selected' : ''}>ต่ำ — นิ่งๆ ไม่ค่อยมีโพสต์ใหม่</option>
+        </select>
+      </div>
+      <div>
+        <label>เปิดใช้งาน</label>
+        <div class="toggle-btn ${g.enabled !== false ? 'on' : ''}" data-role="g-toggle"><div class="knob"></div></div>
+      </div>
+      <div>
+        <label>&nbsp;</label>
+        <button class="remove-btn" data-role="g-remove">ลบ</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderGroups(){
+  const list = document.getElementById('groupList');
+  const groups = state.facebookGroups || [];
+  document.getElementById('groupEmptyHint').style.display = groups.length === 0 ? 'block' : 'none';
+  list.innerHTML = groups.map(groupRowHTML).join('');
+
+  list.querySelectorAll('.group-row').forEach(row => {
+    const idx = Number(row.dataset.idx);
+    row.querySelector('.g-label').addEventListener('input', e => groups[idx].label = e.target.value);
+    row.querySelector('.g-url').addEventListener('input', e => groups[idx].url = e.target.value);
+    row.querySelector('.g-priority').addEventListener('change', e => groups[idx].priority = e.target.value);
+    row.querySelector('[data-role="g-toggle"]').addEventListener('click', (e) => {
+      groups[idx].enabled = !(groups[idx].enabled !== false);
+      e.currentTarget.classList.toggle('on', groups[idx].enabled);
+    });
+    row.querySelector('[data-role="g-remove"]').addEventListener('click', () => {
+      groups.splice(idx, 1);
+      renderGroups();
+    });
+  });
+}
+
+document.getElementById('addGroupBtn').addEventListener('click', () => {
+  state.facebookGroups.push({ label: '', url: '', enabled: true, priority: 'low' });
+  renderGroups();
+});
+
+function provinceChipHTML(loc, i){
+  const priority = loc.priority || 'normal';
+  return `
+    <div class="province-card ${loc.enabled ? 'on' : ''}" data-idx="${i}">
+      <label class="province-chip">
+        <input type="checkbox" ${loc.enabled ? 'checked' : ''}>
+        ${loc.name}
+      </label>
+      <select class="province-priority">
+        <option value="high" ${priority === 'high' ? 'selected' : ''}>สแกนถี่ (สูง)</option>
+        <option value="normal" ${priority === 'normal' ? 'selected' : ''}>ปกติ</option>
+        <option value="low" ${priority === 'low' ? 'selected' : ''}>สแกนห่าง (ต่ำ)</option>
+      </select>
+    </div>
+  `;
+}
+
+function renderProvinces(){
+  const grid = document.getElementById('provinceGrid');
+  const locs = state.marketplace.locations || [];
+  grid.innerHTML = locs.map(provinceChipHTML).join('');
+  grid.querySelectorAll('.province-card').forEach(card => {
+    const idx = Number(card.dataset.idx);
+    const checkbox = card.querySelector('input[type="checkbox"]');
+    checkbox.addEventListener('change', () => {
+      locs[idx].enabled = checkbox.checked;
+      card.classList.toggle('on', locs[idx].enabled);
+    });
+    card.querySelector('.province-priority').addEventListener('change', (e) => {
+      locs[idx].priority = e.target.value;
+    });
+  });
+}
+
+document.getElementById('addProvinceBtn').addEventListener('click', () => {
+  const name = prompt('ชื่อพื้นที่ (ไว้แสดงผลเฉยๆ) เช่น "แพร่"');
+  if (!name) return;
+  const query = prompt('ชื่อเมืองภาษาอังกฤษตัวพิมพ์เล็ก ไม่มีเว้นวรรค เช่น "phrae"');
+  if (!query) return;
+  state.marketplace.locations.push({ name, query: query.trim().toLowerCase().replace(/\s+/g, ''), enabled: true, priority: 'low' });
+  renderProvinces();
+});
+
+function setMode(nationwide){
+  state.marketplace.nationwide = nationwide;
+  document.getElementById('modeNationwide').classList.toggle('active', nationwide);
+  document.getElementById('modeSingle').classList.toggle('active', !nationwide);
+  document.getElementById('nationwideSection').style.display = nationwide ? 'block' : 'none';
+  document.getElementById('singleSection').style.display = nationwide ? 'none' : 'block';
+}
+document.getElementById('modeNationwide').addEventListener('click', () => setMode(true));
+document.getElementById('modeSingle').addEventListener('click', () => setMode(false));
+
+function renderAll(){
+  document.getElementById('keyword').value = state.marketplace.keyword || '';
+  document.getElementById('singleLocation').value = state.marketplace.singleLocation || '';
+  document.getElementById('maxItems').value = state.marketplace.maxItemsPerLocation || 40;
+  setMode(state.marketplace.nationwide !== false);
+  renderGroups();
+  renderProvinces();
+}
+
+let discoveredGroups = [];
+
+function discoverRowHTML(g){
+  const alreadyAdded = (state.facebookGroups || []).some(existing => existing.url === g.url);
+  return `
+    <div class="discover-row">
+      <span style="font-size:16px;flex-shrink:0;margin-top:2px;">${alreadyAdded ? '✅' : '➕'}</span>
+      <div class="d-body">
+        <div class="d-name">${g.name}${alreadyAdded ? ' <span class="meta-badge">ติดตามอยู่</span>' : ''}</div>
+        ${g.description ? `<div class="d-desc">${g.description}</div>` : ''}
+        <div class="d-meta">
+          ${g.members ? `<span class="meta-badge">👥 ${Number(g.members).toLocaleString('th-TH')} สมาชิก</span>` : ''}
+          ${g.privacy ? `<span class="meta-badge">${g.privacy}</span>` : ''}
+          <a href="${g.url}" target="_blank" rel="noopener">เปิดดูกลุ่ม ↗</a>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderDiscoverResults(){
+  const box = document.getElementById('discoverResults');
+  box.innerHTML = discoveredGroups.map(discoverRowHTML).join('');
+}
+
+document.getElementById('discoverBtn').addEventListener('click', async () => {
+  const statusEl = document.getElementById('discoverStatus');
+  const btn = document.getElementById('discoverBtn');
+  const keywords = document.getElementById('discoverKeywords').value
+    .split(',').map(s => s.trim()).filter(Boolean);
+
+  btn.disabled = true;
+  statusEl.textContent = 'กำลังค้นหา... (อาจใช้เวลาถึง 1 นาที)';
+  document.getElementById('discoverResults').innerHTML = '';
+
+  try {
+    const res = await fetch('/api/discover/groups', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keywords }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'ค้นหาไม่สำเร็จ');
+    discoveredGroups = data.groups || [];
+
+    if (discoveredGroups.length === 0) {
+      // ไม่พบกลุ่มเลย — โชว์ diagnostic ให้เห็นสาเหตุจริงแทนข้อความเฉยๆ ที่ไม่บอกอะไร
+      statusEl.innerHTML = `
+        <div class="test-error">
+          ⚠️ ไม่พบกลุ่มเลย — Apify คืนข้อมูลดิบมา <b>${data.rawCount ?? 0}</b> รายการ
+          ${data.rawCount > 0 ? `แต่แกะชื่อ/ลิงก์กลุ่มไม่ได้สักรายการ (mapGroup() แกะ field ผิด)` : `(actor หา group จากคำค้นหานี้ไม่เจอเลย)`}
+        </div>
+        <details style="margin-top:8px;"><summary style="cursor:pointer;color:var(--text-muted);font-size:12px;">ดู input ที่ส่งไป / ตัวอย่างข้อมูลดิบ (สำหรับ debug)</summary>
+          <div class="test-raw-box">input ที่ส่งไป Apify:
+${JSON.stringify(data.inputSent, null, 2)}
+
+ตัวอย่างรายการดิบที่ได้กลับมา:
+${data.sampleRawItem || '(ไม่มีข้อมูลเลย — actor คืนค่าว่างเปล่ามาตั้งแต่ต้น)'}</div>
+        </details>
+      `;
+      renderDiscoverResults();
+      return;
+    }
+
+    // เพิ่มกลุ่มที่เจอใหม่ทั้งหมดเข้ารายการติดตามทันที (ข้ามที่มีอยู่แล้ว กันซ้ำ)
+    let addedCount = 0;
+    discoveredGroups.forEach(g => {
+      const exists = state.facebookGroups.some(existing => existing.url === g.url);
+      if (!exists) {
+        state.facebookGroups.push({ label: g.name, url: g.url, enabled: true });
+        addedCount++;
+      }
+    });
+    renderGroups();
+    renderDiscoverResults();
+
+    if (addedCount === 0) {
+      statusEl.innerHTML = `พบ ${discoveredGroups.length} กลุ่ม แต่ทั้งหมดถูกติดตามอยู่แล้ว — ไม่มีอะไรต้องเพิ่ม`;
+      return;
+    }
+
+    statusEl.innerHTML = `พบ ${discoveredGroups.length} กลุ่ม เพิ่มใหม่ ${addedCount} กลุ่ม — กำลังบันทึกและเริ่มดึงข้อมูล...`;
+
+    // บันทึกอัตโนมัติ (ไม่ต้องรอกด "บันทึกการตั้งค่า" เอง)
+    const saveRes = await fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        facebookGroups: state.facebookGroups,
+        marketplace: {
+          keyword: document.getElementById('keyword').value.trim() || 'รถมือสอง',
+          nationwide: state.marketplace.nationwide !== false,
+          singleLocation: document.getElementById('singleLocation').value.trim() || 'bangkok',
+          locations: state.marketplace.locations,
+          maxItemsPerLocation: Number(document.getElementById('maxItems').value) || 20,
+        },
+      }),
+    });
+    const saveData = await saveRes.json();
+    if (!saveData.ok) {
+      statusEl.innerHTML = `⚠️ เพิ่มกลุ่มไว้ในหน้านี้แล้ว แต่บันทึกไม่สำเร็จ: ${saveData.error} — ลองกด "บันทึกการตั้งค่า" เองด้านล่าง`;
+      return;
+    }
+    state = saveData.settings;
+    renderAll();
+
+    // สั่งดึงข้อมูลจาก Facebook Group ทันที ไม่ต้องรอรอบถัดไป (ไม่แตะแหล่งอื่นเพื่อไม่เปลือง Apify credit)
+    statusEl.innerHTML = `✓ บันทึก ${addedCount} กลุ่มแล้ว — กำลังดึงข้อมูลรอบแรก...`;
+    const refreshRes = await fetch('/api/refresh/facebook_group', { method: 'POST' });
+    const refreshData = await refreshRes.json();
+
+    if (refreshData.ok && refreshData.result.ok) {
+      statusEl.innerHTML = `✓ เพิ่ม ${addedCount} กลุ่ม บันทึกและดึงข้อมูลรอบแรกเสร็จแล้ว — พบรถใหม่ ${refreshData.result.newCount} คัน ไปดูที่แดชบอร์ดหลักได้เลย`;
+    } else {
+      const errMsg = refreshData.result?.error || refreshData.error || 'ไม่ทราบสาเหตุ';
+      statusEl.innerHTML = `✓ เพิ่ม ${addedCount} กลุ่มและบันทึกแล้ว แต่ดึงข้อมูลรอบแรกไม่สำเร็จ: ${errMsg} (รอบถัดไปจะลองใหม่อัตโนมัติทุก 5 นาที)`;
+    }
+  } catch (e) {
+    statusEl.textContent = '✗ ' + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById('testMarketplaceBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('testMarketplaceBtn');
+  const box = document.getElementById('testMarketplaceResult');
+  btn.disabled = true;
+  btn.textContent = '⏳ กำลังทดสอบ... (อาจใช้เวลาถึง 1 นาที)';
+  box.innerHTML = '';
+
+  try {
+    const res = await fetch('/api/test/marketplace', { method: 'POST' });
+    const data = await res.json();
+
+    if (!data.ok) {
+      box.innerHTML = `<div class="test-error">✗ ${data.error}</div>`;
+      return;
+    }
+
+    let html = `
+      <div class="test-stats">
+        <div class="test-stat"><div class="num mono">${data.rawCount}</div><div class="lbl">รายการดิบจาก Apify</div></div>
+        <div class="test-stat ${data.mappedCount === 0 && data.rawCount > 0 ? 'warn' : ''}">
+          <div class="num mono">${data.mappedCount}</div><div class="lbl">แสดงผลได้จริง (หลังแกะข้อมูล)</div>
+        </div>
+      </div>
+      <p class="hint" style="margin:0 0 10px;">คำค้นหา: <b style="color:var(--text);">${data.keyword}</b> · พื้นที่: <b style="color:var(--text);">${data.location}</b> · Actor: <span class="mono">${data.actorId}</span></p>
+    `;
+
+    if (data.rawCount === 0) {
+      html += `<div class="test-error">⚠️ Apify คืนค่ามา 0 รายการ — actor หา location/keyword นี้ไม่เจอ หรือ input ที่ส่งไปยังไม่ตรงกับที่ actor ต้องการ ลองเช็คแท็บ "Input" ของ actor ใน Apify Console เทียบกับ inputSent ด้านล่าง</div>`;
+    } else if (data.mappedCount === 0) {
+      html += `<div class="test-error">⚠️ มีข้อมูลดิบ ${data.rawCount} รายการ แต่แกะ title/url ไม่ได้เลยสักรายการ — ดู "ตัวอย่างข้อมูลดิบ" ด้านล่าง แล้วส่งให้ปรับ mapping ใน fbMarketplaceApify.js</div>`;
+    } else {
+      html += data.sampleResults.map(l => `
+        <div class="test-sample-row">
+          <img src="${l.image ? '/api/image-proxy?url=' + encodeURIComponent(l.image) : ''}" onerror="this.style.display='none'">
+          <div style="flex:1;min-width:0;">
+            <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${l.title}</div>
+            <div class="mono" style="color:var(--text-muted);font-size:11px;">${l.price ? '฿' + Number(l.price).toLocaleString('th-TH') : 'ไม่ระบุราคา'}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    html += `<details style="margin-top:10px;"><summary style="cursor:pointer;color:var(--text-muted);font-size:12px;">ดู input ที่ส่งไป / ตัวอย่างข้อมูลดิบ (สำหรับ debug)</summary>
+      <div class="test-raw-box">input ที่ส่งไป Apify:
+${JSON.stringify(data.inputSent, null, 2)}
+
+ตัวอย่างรายการดิบที่ได้กลับมา:
+${data.sampleRawItem || '(ไม่มีข้อมูล)'}</div>
+    </details>`;
+
+    box.innerHTML = html;
+  } catch (e) {
+    box.innerHTML = `<div class="test-error">✗ ${e.message}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔎 ทดสอบดึงข้อมูลตอนนี้';
+  }
+});
+
+async function load(){
+  const res = await fetch('/api/settings');
+  state = await res.json();
+  if (!state.facebookGroups) state.facebookGroups = [];
+  if (!state.marketplace) state.marketplace = {};
+  if (!state.marketplace.locations) state.marketplace.locations = [];
+  renderAll();
+}
+
+document.getElementById('saveBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('saveBtn');
+  const statusEl = document.getElementById('saveStatus');
+  btn.disabled = true;
+  statusEl.textContent = 'กำลังบันทึก...';
+  statusEl.className = 'save-status';
+
+  const payload = {
+    facebookGroups: state.facebookGroups.filter(g => g.url && g.url.trim()),
+    marketplace: {
+      keyword: document.getElementById('keyword').value.trim() || 'รถมือสอง',
+      nationwide: state.marketplace.nationwide !== false,
+      singleLocation: document.getElementById('singleLocation').value.trim() || 'bangkok',
+      locations: state.marketplace.locations,
+      maxItemsPerLocation: Number(document.getElementById('maxItems').value) || 40,
+    },
+  };
+
+  try {
+    const res = await fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'บันทึกไม่สำเร็จ');
+    state = data.settings;
+    statusEl.textContent = '✓ บันทึกแล้ว — รอบดึงข้อมูลถัดไปจะใช้ค่านี้';
+    statusEl.className = 'save-status ok';
+    renderAll();
+  } catch (e) {
+    statusEl.textContent = '✗ ' + e.message;
+    statusEl.className = 'save-status';
+  } finally {
+    btn.disabled = false;
+    setTimeout(() => { statusEl.textContent = ''; }, 6000);
+  }
+});
+
+load();
+</script>
+</body>
+</html>
